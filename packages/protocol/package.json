@@ -1,0 +1,16 @@
+{
+  "name": "@ms-minutes/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Body Protocol: the typed contract between the brain and every body.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "schema:generate": "tsx scripts/generate-json-schema.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}

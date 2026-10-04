@@ -1,0 +1,21 @@
+{
+  "name": "@ms-minutes/brain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The brain: one persistent identity that every body connects to.",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.3.3",
+    "@ms-minutes/protocol": "workspace:^",
+    "fastify": "^5.12.5",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
+  }
+}

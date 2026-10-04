@@ -1,0 +1,17 @@
+{
+  "name": "@ms-minutes/stub-body",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A minimal terminal body for exercising the Body Protocol.",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=../../.env src/main.ts"
+  },
+  "dependencies": {
+    "@ms-minutes/protocol": "workspace:^",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
+  }
+}

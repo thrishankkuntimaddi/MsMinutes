@@ -1,0 +1,34 @@
+{
+  "name": "ms-minutes",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "One Brain. Many Bodies. A persistent AI companion that inhabits many devices.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:brain": "tsx watch --env-file-if-exists=.env apps/brain/src/main.ts",
+    "start:brain": "tsx --env-file-if-exists=.env apps/brain/src/main.ts",
+    "stub-body": "tsx --env-file-if-exists=.env apps/stub-body/src/main.ts",
+    "schema:generate": "tsx packages/protocol/scripts/generate-json-schema.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "tsc --noEmit -p tsconfig.json && eslint . && prettier --check . && vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.1",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}
