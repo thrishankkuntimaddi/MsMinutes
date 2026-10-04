@@ -7,7 +7,7 @@ The architecture is described in [ARCHITECTURE.md](ARCHITECTURE.md), and key dec
 
 ## Status
 
-**Phase 0: Architecture.** The Body Protocol is defined, and the brain accepts body connections (hello → welcome → heartbeats). There is no LLM yet; that comes in Phase 1.
+**Phase 1: Brain.** She talks. A body sends what the user said, the brain asks Claude, and her reply streams back with expressions for her face. The conversation is shared across bodies. Turns are traced at `GET /api/turns`.
 
 **Focus:** the brain + the ESP32 desk companion, built in parallel. See the [hardware list](docs/hardware/desk-companion.md).
 
@@ -17,6 +17,7 @@ The architecture is described in [ARCHITECTURE.md](ARCHITECTURE.md), and key dec
 apps/brain          The brain: WebSocket gateway, body registry, event bus
 apps/stub-body      A terminal body for exercising the protocol
 packages/protocol   The Body Protocol: zod schemas, types, codec, JSON Schema
+packages/persona    Who she is: persona.md becomes her system prompt
 docs/adr            Architecture Decision Records
 docs/hardware       Parts lists, wiring and bring-up for physical bodies
 ```
@@ -28,16 +29,22 @@ Requires Node 24 (see `.nvmrc`). pnpm is provided through corepack:
 ```sh
 corepack enable        # once; puts `pnpm` on your PATH
 pnpm install
-cp .env.example .env   # optional
+cp .env.example .env   # then set ANTHROPIC_API_KEY
 ```
 
-Run the brain and connect a body:
+Run the brain and talk to her from the terminal body:
 
 ```sh
 pnpm dev:brain         # terminal 1: brain on ws://127.0.0.1:7700/ws
-pnpm stub-body         # terminal 2: a body says hello
-curl localhost:7700/api/bodies
+pnpm stub-body         # terminal 2: type to talk
 ```
+
+```
+you › Good morning
+Ms. Minutes › [happy 0.5] Good morning, Thrishank! Coffee first, or straight into it?
+```
+
+Her personality lives in [packages/persona/persona.md](packages/persona/persona.md). Edit it and restart the brain.
 
 ## Scripts
 

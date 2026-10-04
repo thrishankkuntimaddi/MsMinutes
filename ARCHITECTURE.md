@@ -3,11 +3,11 @@
 > **One Brain. Many Bodies.**
 > A persistent AI identity that talks naturally with a human and inhabits many digital and physical bodies — starting with a tiny retro clock on the desk.
 
-|              |                      |
-| ------------ | -------------------- |
-| Status       | Draft v0.1 (Phase 0) |
-| Last updated | 2026-10-04           |
-| Owner        | Thrishank            |
+|              |                |
+| ------------ | -------------- |
+| Status       | v0.2 (Phase 1) |
+| Last updated | 2026-10-04     |
+| Owner        | Thrishank      |
 
 ---
 

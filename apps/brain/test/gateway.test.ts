@@ -12,6 +12,7 @@ import {
 } from "@ms-minutes/protocol";
 import { loadConfig } from "../src/config.js";
 import { buildServer } from "../src/server.js";
+import { FakeLLM } from "./fake-llm.js";
 
 type Server = Awaited<ReturnType<typeof buildServer>>;
 
@@ -24,8 +25,9 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function start(env: Record<string, string> = {}) {
-  server = await buildServer(loadConfig({ PORT: "0", LOG_LEVEL: "silent", ...env }));
+// Tests never call the real Claude API.
+async function start(env: Record<string, string> = {}, llm = new FakeLLM([])) {
+  server = await buildServer(loadConfig({ PORT: "0", LOG_LEVEL: "silent", ...env }), { llm });
   await server.app.listen({ host: "127.0.0.1", port: 0 });
   const { port } = server.app.server.address() as AddressInfo;
   return { ...server, url: `ws://127.0.0.1:${port}/ws` };
@@ -191,6 +193,31 @@ describe("body gateway", () => {
 
     await until(() => received.length === 1);
     expect(received[0]).toMatchObject({ payload: { text: "Good morning" } });
+  });
+
+  it("answers an utterance with a streamed reply and an expression", async () => {
+    const llm = new FakeLLM([
+      { tools: [{ name: "set_expression", input: { affect: "happy", intensity: 0.5 } }] },
+      { text: ["Good morning, ", "Thrishank."] },
+    ]);
+    const { url, app } = await start({}, llm);
+    const body = await connect(url);
+    body.send(hello());
+    await body.next();
+
+    body.send(bodyMessage("event.utterance.text", "desk-01", { text: "Good morning" }));
+    const got: string[] = [];
+    for (;;) {
+      const m = await body.next();
+      if (m.type === "state.set") got.push(m.payload.mode);
+      if (m.type === "expression.set") got.push(m.payload.affect);
+      if (m.type === "speech.text.delta") got.push(m.payload.text);
+      if (m.type === "state.set" && m.payload.mode === "idle") break;
+    }
+    expect(got).toEqual(["thinking", "happy", "speaking", "Good morning, ", "Thrishank.", "idle"]);
+
+    const res = await app.inject({ method: "GET", url: "/api/turns" });
+    expect(res.json().turns[0]).toMatchObject({ bodyId: "desk-01", llmCalls: 2 });
   });
 
   it("disconnects a body that never says hello", async () => {

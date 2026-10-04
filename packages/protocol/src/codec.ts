@@ -12,6 +12,11 @@ export type DecodeResult<M> =
 type MessageOf<U, T> = Extract<U, { type: T }>;
 type PayloadOf<U, T> = MessageOf<U, T> extends { payload: infer P } ? P : never;
 
+/** Payload type of a brain → body message type, e.g. `BrainPayload<"state.set">`. */
+export type BrainPayload<T extends BrainToBodyType> = PayloadOf<BrainToBodyMessage, T>;
+/** Payload type of a body → brain message type. */
+export type BodyPayload<T extends BodyToBrainType> = PayloadOf<BodyToBrainMessage, T>;
+
 function decodeWith<S extends z.ZodType>(schema: S, raw: string): DecodeResult<z.infer<S>> {
   let data: unknown;
   try {

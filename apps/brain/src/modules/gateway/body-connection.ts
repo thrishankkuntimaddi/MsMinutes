@@ -142,7 +142,7 @@ export class BodyConnection {
     };
     registry.add(body);
 
-    this.#send(
+    this.send(
       brainMessage(
         "welcome",
         hello.bodyId,
@@ -199,15 +199,16 @@ export class BodyConnection {
   }
 
   #sendError(code: ErrorCode, message: string, fatal: boolean, replyTo?: string): void {
-    this.#send(
+    this.send(
       brainMessage("error", this.#bodyId ?? UNKNOWN_BODY, { code, message, fatal }, replyTo),
     );
   }
 
-  #send(message: BrainToBodyMessage): void {
-    if (this.#socket.readyState === this.#socket.OPEN) {
-      this.#socket.send(encode(message));
-    }
+  /** Sends a message if the socket is still open. Returns whether it was sent. */
+  send(message: BrainToBodyMessage): boolean {
+    if (this.#socket.readyState !== this.#socket.OPEN) return false;
+    this.#socket.send(encode(message));
+    return true;
   }
 }
 

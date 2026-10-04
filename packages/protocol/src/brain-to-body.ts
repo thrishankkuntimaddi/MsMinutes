@@ -80,6 +80,7 @@ export const ErrorCode = z.enum([
   "replaced",
   "heartbeat_timeout",
   "not_implemented",
+  "llm_unavailable",
   "internal",
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;

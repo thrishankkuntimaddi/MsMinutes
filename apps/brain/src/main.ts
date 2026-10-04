@@ -2,12 +2,7 @@ import { loadConfig } from "./config.js";
 import { buildServer } from "./server.js";
 
 const config = loadConfig();
-const { app, bus } = await buildServer(config);
-
-// Phase 0: nothing reasons about events yet. The orchestrator subscribes here in Phase 1.
-bus.on("body.message", ({ bodyId, message }) => {
-  app.log.info({ bodyId, type: message.type }, "event received; no orchestrator yet (Phase 1)");
-});
+const { app } = await buildServer(config);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, "shutting down");

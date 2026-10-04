@@ -1,16 +1,26 @@
 import websocket from "@fastify/websocket";
 import Fastify from "fastify";
+import { buildSystemPrompt } from "@ms-minutes/persona";
 import { PROTOCOL_VERSION } from "@ms-minutes/protocol";
 import type { Config } from "./config.js";
 import { BodyRegistry } from "./modules/bodies/registry.js";
 import { EventBus } from "./modules/events/event-bus.js";
 import { registerBodyGateway } from "./modules/gateway/gateway.js";
+import { ClaudeLLM, type LLM } from "./modules/llm/llm.js";
+import { Orchestrator } from "./modules/orchestrator/orchestrator.js";
+import { TurnTraces } from "./modules/tracing/turn-traces.js";
 
 const MAX_MESSAGE_BYTES = 1024 * 1024;
 
-export async function buildServer(config: Config) {
+export type ServerOptions = {
+  /** Overrides the Claude adapter (tests use a scripted fake). */
+  llm?: LLM;
+};
+
+export async function buildServer(config: Config, options: ServerOptions = {}) {
   const app = Fastify({ logger: { level: config.logLevel } });
   const registry = new BodyRegistry();
+  const traces = new TurnTraces();
   const bus = new EventBus((err, event) =>
     app.log.error({ err, event: event.type }, "event handler failed"),
   );
@@ -30,7 +40,20 @@ export async function buildServer(config: Config) {
     })),
   }));
 
-  registerBodyGateway(app, { config, registry, bus });
+  app.get("/api/turns", async () => ({ turns: traces.list() }));
 
-  return { app, registry, bus };
+  const { send } = registerBodyGateway(app, { config, registry, bus });
+
+  const orchestrator = new Orchestrator({
+    llm: options.llm ?? new ClaudeLLM(config.llm),
+    send,
+    registry,
+    traces,
+    systemPrompt: buildSystemPrompt({ name: config.personaName, userName: config.userName }),
+    timezone: config.timezone,
+    log: app.log,
+  });
+  orchestrator.attach(bus);
+
+  return { app, registry, bus, orchestrator, traces };
 }

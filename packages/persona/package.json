@@ -1,0 +1,10 @@
+{
+  "name": "@ms-minutes/persona",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Who Ms. Minutes is: the persona spec that becomes her system prompt.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
