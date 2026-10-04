@@ -706,6 +706,7 @@
                 "replaced",
                 "heartbeat_timeout",
                 "not_implemented",
+                "llm_unavailable",
                 "internal"
               ]
             },
