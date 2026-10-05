@@ -3,11 +3,11 @@
 > **One Brain. Many Bodies.**
 > A persistent AI identity that talks naturally with a human and inhabits many digital and physical bodies — starting with a tiny retro clock on the desk.
 
-|              |                   |
-| ------------ | ----------------- |
-| Status       | v0.3 (Phases 2–4) |
-| Last updated | 2026-10-05        |
-| Owner        | Thrishank         |
+|              |                        |
+| ------------ | ---------------------- |
+| Status       | v0.4 (Phases 1–4 done) |
+| Last updated | 2026-10-05             |
+| Owner        | Thrishank              |
 
 ---
 
@@ -202,6 +202,7 @@ type Envelope<T extends string, P> = {
 | `speech.audio.chunk` | `{ turnId, seq, codec, sampleRate, data }`                                            | TTS audio                        |
 | `speech.marks`       | `{ turnId, marks: { t, kind, value }[] }`                                             | Optional timing (visemes/words)  |
 | `speech.end`         | `{ turnId }`                                                                          | Speech finished                  |
+| `transcript`         | `{ text }`                                                                            | What the brain heard (ADR-0010)  |
 | `speech.cancel`      | `{ turnId }`                                                                          | Stop playback (barge-in)         |
 | `capability.call`    | `{ callId, name, args }`                                                              | Ask body to perform a capability |
 | `error`              | `{ code, message, fatal }`                                                            | Fatal errors close the socket    |
@@ -671,6 +672,7 @@ ADRs live in `docs/adr/` using the format: _Context → Decision → Consequence
 | 0007 | Local development model through an Ollama adapter                  | Accepted |
 | 0008 | Inline stage tags for moods and body actions                       | Accepted |
 | 0009 | Neural TTS in the brain, streamed as audio                         | Accepted |
+| 0010 | Local hearing in the brain, VAD on the body, real barge-in         | Accepted |
 
 ---
 
