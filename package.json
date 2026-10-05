@@ -9,17 +9,18 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev:web": "vite apps/web-body",
     "dev:brain": "tsx watch --env-file-if-exists=.env apps/brain/src/main.ts",
     "start:brain": "tsx --env-file-if-exists=.env apps/brain/src/main.ts",
     "stub-body": "tsx --env-file-if-exists=.env apps/stub-body/src/main.ts",
     "schema:generate": "tsx packages/protocol/scripts/generate-json-schema.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/web-body/tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "tsc --noEmit -p tsconfig.json && eslint . && prettier --check . && vitest run"
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/web-body/tsconfig.json && eslint . && prettier --check . && vitest run"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,6 +30,7 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.0",
+    "vite": "^8.3.2",
     "vitest": "^5.0.3"
   }
 }

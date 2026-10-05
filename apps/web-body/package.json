@@ -1,0 +1,20 @@
+{
+  "name": "@ms-minutes/web-body",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The browser body: her face on a canvas, her voice through speech synthesis.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ms-minutes/character": "workspace:^",
+    "@ms-minutes/protocol": "workspace:^"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2"
+  }
+}

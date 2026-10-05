@@ -3,11 +3,11 @@
 > **One Brain. Many Bodies.**
 > A persistent AI identity that talks naturally with a human and inhabits many digital and physical bodies — starting with a tiny retro clock on the desk.
 
-|              |                |
-| ------------ | -------------- |
-| Status       | v0.2 (Phase 1) |
-| Last updated | 2026-10-04     |
-| Owner        | Thrishank      |
+|              |                   |
+| ------------ | ----------------- |
+| Status       | v0.3 (Phases 2–4) |
+| Last updated | 2026-10-05        |
+| Owner        | Thrishank         |
 
 ---
 
@@ -383,7 +383,8 @@ Layer 1  Idle      blinks, eye saccades, breathing, clock ticking
 
 - An emotion is a **preset of target values** (JSON).
 - Blending emotions = weighted interpolation of presets → procedural expressions for free.
-- Initial affect set: `neutral, happy, sad, angry, surprised, curious, confused, sleepy, excited, concerned, laughing, thinking`.
+- Affect set: `neutral, happy, sad, angry, surprised, curious, confused, sleepy, excited, concerned, laughing, thinking, playful, shy, proud`. Each preset also sets arm poses and glove shapes (open, fist, point, thumb).
+- Layer 4 actions (`walk, run, jump, turn_around, spin, sit, stand, dance, wave, bow, come_closer, step_back, peek`) live in `packages/character` (`Motion`); bodies list the ones they support in an `animate` capability (ADR-0008).
 - `listening` and `speaking` are **modes** (`state.set`), not emotions.
 
 ### 9.4 Portability
@@ -667,6 +668,9 @@ ADRs live in `docs/adr/` using the format: _Context → Decision → Consequence
 | 0004 | Modular monolith in a pnpm TypeScript monorepo                     | Accepted |
 | 0005 | Spoken text streamed; structured outputs via tool calls            | Accepted |
 | 0006 | Risk-tiered policy gate; body-side safety for physical bodies      | Accepted |
+| 0007 | Local development model through an Ollama adapter                  | Accepted |
+| 0008 | Inline stage tags for moods and body actions                       | Accepted |
+| 0009 | Neural TTS in the brain, streamed as audio                         | Accepted |
 
 ---
 

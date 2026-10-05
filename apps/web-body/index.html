@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#120a05" />
+    <title>TVA Orientation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=VT323&family=Oswald:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/intro.css" />
+  </head>
+  <body>
+    <div class="room" aria-hidden="true">
+      <div class="wall"></div>
+      <div class="emblem"></div>
+      <div class="beam"></div>
+      <canvas class="dust"></canvas>
+      <div class="spill"></div>
+    </div>
+
+    <main class="stage">
+      <div class="tv" id="tv">
+        <div class="tv-body">
+          <div class="bezel">
+            <div class="screen off" id="screen">
+              <div class="tube">
+                <canvas id="face" class="face" aria-label="Miss Minutes"></canvas>
+                <canvas id="static" class="static"></canvas>
+                <p class="caption" id="caption" aria-live="polite"></p>
+              </div>
+              <div class="scanlines"></div>
+              <div class="mask"></div>
+              <div class="roll"></div>
+              <div class="curve"></div>
+              <div class="glare"></div>
+            </div>
+          </div>
+          <aside class="panel">
+            <div class="plate">TVA</div>
+            <div class="knob"><span></span></div>
+            <div class="knob small"><span></span></div>
+            <div class="grille"></div>
+            <div class="led" id="led"></div>
+          </aside>
+        </div>
+        <div class="tv-feet"><span></span><span></span></div>
+      </div>
+
+      <section class="console" id="console" hidden>
+        <p class="heard" id="heard" aria-live="polite"></p>
+        <form class="dock" id="dock" autocomplete="off">
+          <button
+            type="button"
+            class="mic"
+            id="mic"
+            aria-label="Talk to her"
+            title="Talk (hold Space)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3" />
+              <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+            </svg>
+          </button>
+          <input
+            id="say"
+            type="text"
+            placeholder="Say something to Miss Minutes…"
+            maxlength="4000"
+          />
+          <button type="submit" class="send" aria-label="Send">➤</button>
+        </form>
+        <p class="status">
+          <span class="dot" id="dot"></span><span id="status">Connecting to her brain…</span>
+          <button type="button" class="link" id="replay">↺ Replay intro</button>
+        </p>
+      </section>
+    </main>
+
+    <div class="gate" id="gate">
+      <div class="seal" aria-hidden="true">
+        <svg viewBox="0 0 200 200">
+          <defs>
+            <path id="ring" d="M100,100 m-76,0 a76,76 0 1,1 152,0 a76,76 0 1,1 -152,0" />
+          </defs>
+          <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" stroke-width="3" />
+          <circle cx="100" cy="100" r="62" fill="none" stroke="currentColor" stroke-width="2" />
+          <text font-size="15" letter-spacing="4.2" fill="currentColor">
+            <textPath href="#ring">TIME VARIANCE AUTHORITY • FOR ALL TIME • ALWAYS •</textPath>
+          </text>
+          <text
+            x="100"
+            y="114"
+            text-anchor="middle"
+            font-size="40"
+            font-weight="600"
+            fill="currentColor"
+          >
+            TVA
+          </text>
+        </svg>
+      </div>
+      <p class="gate-title">Orientation Program</p>
+      <button type="button" class="begin" id="begin">Begin</button>
+      <p class="gate-note">Sound on · headphones recommended</p>
+    </div>
+
+    <div class="grain" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <script type="module" src="/src/intro.ts"></script>
+  </body>
+</html>

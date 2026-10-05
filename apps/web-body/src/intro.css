@@ -1,0 +1,728 @@
+:root {
+  --bg: #120a05;
+  --wall-hi: #3b2614;
+  --amber: #ffb347;
+  --amber-dim: #c9822f;
+  --phosphor: #ffcf87;
+  --plastic-hi: #e98a3a;
+  --plastic: #b85a1c;
+  --plastic-lo: #5e2a0b;
+  /* Driven from script: how bright her screen is right now (0..1). */
+  --talk: 0;
+  --power: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--amber);
+  font-family: "Oswald", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- The room ---------- */
+
+.room,
+.room > * {
+  position: fixed;
+  inset: 0;
+}
+
+.wall {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, var(--wall-hi) 0%, #1e1209 55%, var(--bg) 100%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 160px);
+  background-blend-mode: multiply;
+}
+
+.emblem {
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><circle cx='100' cy='100' r='94' fill='none' stroke='%23ffb347' stroke-width='3'/><circle cx='100' cy='100' r='62' fill='none' stroke='%23ffb347' stroke-width='2'/><text x='100' y='114' text-anchor='middle' font-family='Oswald,Arial' font-size='40' font-weight='600' fill='%23ffb347'>TVA</text></svg>")
+    center 46% / min(120vh, 120vw) no-repeat;
+  opacity: 0.035;
+  filter: blur(1px);
+}
+
+/* A shaft of light from a high window, with drifting dust inside it. */
+.beam {
+  background: linear-gradient(
+    112deg,
+    transparent 18%,
+    rgba(255, 200, 130, 0.07) 30%,
+    rgba(255, 210, 150, 0.1) 36%,
+    transparent 52%
+  );
+  filter: blur(18px);
+  animation: beam 9s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+@keyframes beam {
+  from {
+    opacity: 0.75;
+    transform: translateX(-1.5%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(1.5%);
+  }
+}
+
+.dust {
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+}
+
+/* Light the screen throws onto the wall and desk. */
+.spill {
+  background: radial-gradient(
+    ellipse 42% 40% at 50% 46%,
+    rgba(255, 150, 60, calc(0.1 + var(--power) * 0.14 + var(--talk) * 0.1)) 0%,
+    transparent 70%
+  );
+  transition: background 0.2s;
+}
+
+/* ---------- The television ---------- */
+
+.stage {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 28px;
+  padding: 16px;
+}
+
+.tv {
+  width: min(92vw, 860px, calc((100vh - 230px) * 1.3));
+  filter: drop-shadow(0 40px 50px rgba(0, 0, 0, 0.65));
+  animation: settle 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+}
+
+.tv-body {
+  display: flex;
+  gap: 2.4%;
+  padding: 3.2%;
+  border-radius: 34px / 30px;
+  background:
+    linear-gradient(160deg, rgba(255, 230, 190, 0.35) 0%, transparent 22%),
+    linear-gradient(180deg, var(--plastic-hi) 0%, var(--plastic) 48%, var(--plastic-lo) 100%);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 235, 200, 0.55),
+    inset 0 -6px 14px rgba(40, 10, 0, 0.6),
+    inset 6px 0 18px rgba(255, 190, 120, 0.15),
+    0 0 0 2px #3a1505;
+}
+
+.bezel {
+  flex: 1;
+  padding: 3.2%;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #2a1306, #140802);
+  box-shadow:
+    inset 0 4px 10px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 220, 170, 0.35);
+}
+
+.screen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 9% / 11%;
+  background: radial-gradient(ellipse at 50% 45%, #2a1a0d 0%, #0d0703 75%);
+  box-shadow: 0 0 calc(20px + var(--talk) * 30px) rgba(255, 150, 60, calc(var(--power) * 0.35));
+  isolation: isolate;
+}
+
+.tube {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  background: radial-gradient(ellipse at 50% 42%, #5a3214 0%, #2a160a 45%, #120904 100%);
+}
+
+.screen.off .tube {
+  transform: scale(0, 0.003);
+  filter: brightness(6);
+}
+
+.screen.on .tube {
+  animation: power-on 0.9s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+}
+
+@keyframes power-on {
+  0% {
+    transform: scale(0, 0.004);
+    filter: brightness(8);
+  }
+  30% {
+    transform: scale(1, 0.006);
+    filter: brightness(6);
+  }
+  62% {
+    transform: scale(1, 1.04);
+    filter: brightness(2.2) contrast(1.4);
+  }
+  100% {
+    transform: scale(1, 1);
+    filter: brightness(1);
+  }
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Phosphor bloom around everything she draws. */
+  filter: saturate(1.06) contrast(1.03);
+  animation: jitter 5s steps(1) infinite;
+}
+
+@keyframes jitter {
+  0%,
+  96%,
+  100% {
+    translate: 0 0;
+  }
+  97% {
+    translate: 0.6px 0;
+  }
+  98% {
+    translate: -0.4px 0.3px;
+  }
+}
+
+.static {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+
+.static.show {
+  opacity: 1;
+  transition: none;
+}
+
+.caption {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 5%;
+  margin: 0;
+  text-align: center;
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: clamp(18px, 3.6vw, 38px);
+  line-height: 1.05;
+  color: var(--phosphor);
+  text-shadow:
+    0 0 6px rgba(255, 170, 80, 0.9),
+    0 0 18px rgba(255, 130, 40, 0.5),
+    1px 0 0 rgba(255, 60, 40, 0.5),
+    -1px 0 0 rgba(60, 200, 255, 0.3);
+  letter-spacing: 0.02em;
+}
+
+.caption .w {
+  opacity: 0;
+  display: inline-block;
+  transform: translateY(4px);
+  transition:
+    opacity 0.12s,
+    transform 0.2s;
+}
+
+.caption .w.on {
+  opacity: 1;
+  transform: none;
+}
+
+/* CRT layers, top to bottom. */
+.scanlines,
+.mask,
+.roll,
+.curve,
+.glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+  animation: flicker 0.12s steps(2) infinite;
+}
+
+@keyframes flicker {
+  50% {
+    opacity: 0.86;
+  }
+}
+
+/* Aperture grille: faint RGB stripes, visible up close. */
+.mask {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 60, 60, 0.05) 0 1px,
+    rgba(60, 255, 120, 0.04) 1px 2px,
+    rgba(70, 120, 255, 0.05) 2px 3px
+  );
+  mix-blend-mode: screen;
+}
+
+.roll {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 210, 160, 0.06) 48%,
+    rgba(255, 210, 160, 0.09) 50%,
+    transparent 56%
+  );
+  background-size: 100% 300%;
+  animation: roll 7s linear infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes roll {
+  from {
+    background-position: 0 100%;
+  }
+  to {
+    background-position: 0 -200%;
+  }
+}
+
+/* The tube bulges: darker, softer edges. */
+.curve {
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse 75% 70% at 50% 50%,
+    transparent 58%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.85),
+    inset 0 0 4px rgba(0, 0, 0, 1);
+}
+
+.glare {
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse 55% 30% at 28% 12%, rgba(255, 255, 255, 0.13), transparent 70%),
+    linear-gradient(125deg, transparent 62%, rgba(255, 255, 255, 0.04) 66%, transparent 74%);
+}
+
+/* Side panel: plate, knobs, speaker. */
+.panel {
+  width: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7%;
+  padding: 3% 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.32));
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.plate {
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  font-size: clamp(11px, 1.6vw, 18px);
+  padding: 0.2em 0.5em 0.2em 0.68em;
+  color: #2a1204;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffe7a6, #d9a441 55%, #8a5a12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.knob {
+  position: relative;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5c3a1f, #1d0e05 70%);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.7),
+    inset 0 1px 1px rgba(255, 220, 170, 0.35);
+}
+
+.knob span {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  width: 6%;
+  height: 32%;
+  translate: -50% 0;
+  border-radius: 2px;
+  background: #ffcf87;
+  opacity: 0.8;
+}
+
+.knob.small {
+  width: 44%;
+  rotate: 120deg;
+}
+
+.grille {
+  width: 70%;
+  flex: 1;
+  min-height: 40px;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.75) 1.4px, transparent 1.8px) 0 0 / 8px 8px;
+  opacity: 0.85;
+}
+
+.led {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #3a0d05;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.led.on {
+  background: #ff5a2a;
+  box-shadow: 0 0 10px 2px rgba(255, 90, 40, 0.8);
+}
+
+.tv-feet {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 14%;
+}
+
+.tv-feet span {
+  width: 10%;
+  height: 14px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(180deg, #3a1505, #140600);
+}
+
+/* ---------- Console: talk to her ---------- */
+
+.console {
+  width: min(92vw, 720px);
+  display: grid;
+  gap: 10px;
+  animation: settle 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.console[hidden] {
+  display: none;
+}
+
+.heard {
+  min-height: 1.4em;
+  margin: 0;
+  text-align: center;
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 22px;
+  color: var(--amber-dim);
+}
+
+.heard:not(:empty)::before {
+  content: "you › ";
+  opacity: 0.6;
+}
+
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(20, 10, 4, 0.75);
+  border: 1px solid rgba(255, 179, 71, 0.3);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 220, 170, 0.08);
+}
+
+.dock input {
+  flex: 1;
+  min-width: 0;
+  font:
+    20px "VT323",
+    ui-monospace,
+    monospace;
+  color: var(--phosphor);
+  background: none;
+  border: 0;
+  outline: none;
+  padding: 6px 4px;
+}
+
+.dock input::placeholder {
+  color: rgba(255, 179, 71, 0.4);
+}
+
+.mic,
+.send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 179, 71, 0.5);
+  background: rgba(255, 179, 71, 0.08);
+  color: var(--amber);
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s;
+}
+
+.mic svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.mic:hover,
+.send:hover {
+  background: rgba(255, 179, 71, 0.18);
+}
+
+.mic:active,
+.send:active {
+  transform: scale(0.95);
+}
+
+.mic.live {
+  color: #1a0b03;
+  background: #ff7a2a;
+  box-shadow: 0 0 0 0 rgba(255, 122, 42, 0.7);
+  animation: pulse 1.2s ease-out infinite;
+}
+
+@keyframes pulse {
+  to {
+    box-shadow: 0 0 0 16px rgba(255, 122, 42, 0);
+  }
+}
+
+.mic:focus-visible,
+.send:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--amber-dim);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a6a3a;
+}
+
+.dot.online {
+  background: #7ddc6a;
+  box-shadow: 0 0 8px rgba(125, 220, 106, 0.8);
+}
+
+.dot.offline {
+  background: #e0503a;
+}
+
+.link {
+  margin-left: 10px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.link:hover {
+  opacity: 1;
+}
+
+.begin {
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--amber);
+  background: rgba(255, 179, 71, 0.06);
+  border: 1px solid rgba(255, 179, 71, 0.45);
+  border-radius: 999px;
+  padding: 12px 40px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s;
+}
+
+.begin:hover {
+  background: rgba(255, 179, 71, 0.16);
+  box-shadow: 0 0 24px rgba(255, 150, 60, 0.35);
+}
+
+.begin:active {
+  transform: scale(0.97);
+}
+
+.begin:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* ---------- The gate (a click is needed before a page may speak) ---------- */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 16px;
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(30, 16, 6, 0.86), rgba(8, 4, 1, 0.97));
+  backdrop-filter: blur(6px);
+  transition:
+    opacity 0.7s,
+    visibility 0.7s;
+}
+
+.gate.gone {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.seal {
+  width: min(46vw, 220px);
+  color: var(--amber);
+  filter: drop-shadow(0 0 12px rgba(255, 150, 60, 0.45));
+  animation: spin 40s linear infinite;
+}
+
+.seal text {
+  font-family: "Oswald", Arial, sans-serif;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.gate-title {
+  margin: 0;
+  font-size: clamp(20px, 4vw, 32px);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.gate-note {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--amber-dim);
+}
+
+/* ---------- Film ---------- */
+
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  animation: grain 0.5s steps(1) infinite;
+}
+
+@keyframes grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-7%, 4%);
+  }
+  40% {
+    transform: translate(5%, -9%);
+  }
+  60% {
+    transform: translate(-3%, 7%);
+  }
+  80% {
+    transform: translate(9%, 2%);
+  }
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 75% at 50% 48%, transparent 55%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    display: none;
+  }
+  .tv-body {
+    padding: 4%;
+    border-radius: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .grain,
+  .roll,
+  .scanlines,
+  .seal,
+  .face {
+    animation: none;
+  }
+}
