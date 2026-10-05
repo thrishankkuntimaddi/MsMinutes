@@ -65,6 +65,8 @@ Her voice: set `TTS_PROVIDER=kokoro` in `.env` and the brain speaks with Kokoro,
 
 Talking hands-free: with `STT_PROVIDER=local`, the brain also hears you (Moonshine speech recognition on this machine, ~250 MB on first run). Click the mic once and just talk; she listens for when you start and stop, and you can talk over her to interrupt. Headphones help if your speakers echo into the mic. Without it, the mic button uses the browser's own recognition.
 
+Her memory: with `MEMORY_DB=./data/memory` she remembers you across conversations and restarts, in an embedded Postgres + pgvector (PGlite) under `data/`. No database server needed; or point `MEMORY_DB` at a `postgres://` URL (`docker compose -f infra/docker-compose.yml up -d`). See and edit what she remembers under **Her memories** in the browser, or via `GET /api/memories`.
+
 Her poses and moves are on a check sheet at http://localhost:5179/poses.html.
 
 Her personality lives in [packages/persona/persona.md](packages/persona/persona.md). Edit it and restart the brain.
