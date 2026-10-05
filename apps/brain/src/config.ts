@@ -9,8 +9,14 @@ const Env = z.object({
   HELLO_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   USER_NAME: z.string().min(1).optional(),
   TIMEZONE: z.string().min(1).default(Intl.DateTimeFormat().resolvedOptions().timeZone),
+  LLM_PROVIDER: z.enum(["claude", "ollama"]).default("claude"),
   LLM_MODEL: z.string().min(1).default("claude-sonnet-5-5"),
   LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("low"),
+  OLLAMA_URL: z.url().default("http://127.0.0.1:11434"),
+  OLLAMA_MODEL: z.string().min(1).default("qwen2.5:3b"),
+  TTS_PROVIDER: z.enum(["none", "kokoro"]).default("none"),
+  TTS_VOICE: z.string().min(1).default("af_heart"),
+  TTS_SPEED: z.coerce.number().min(0.5).max(2).default(1),
 });
 
 export type Config = {
@@ -25,6 +31,11 @@ export type Config = {
   userName: string | undefined;
   timezone: string;
   llm: { model: string; effort: z.infer<typeof Env>["LLM_EFFORT"] };
+  /** Which model answers: Claude, or a local Ollama model for development. */
+  llmProvider: z.infer<typeof Env>["LLM_PROVIDER"];
+  ollama: { url: string; model: string };
+  /** Her voice. "none" leaves speech to each body (e.g. the browser's own voices). */
+  tts: { provider: z.infer<typeof Env>["TTS_PROVIDER"]; voice: string; speed: number };
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -44,5 +55,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     userName: e.USER_NAME,
     timezone: e.TIMEZONE,
     llm: { model: e.LLM_MODEL, effort: e.LLM_EFFORT },
+    llmProvider: e.LLM_PROVIDER,
+    ollama: { url: e.OLLAMA_URL, model: e.OLLAMA_MODEL },
+    tts: { provider: e.TTS_PROVIDER, voice: e.TTS_VOICE, speed: e.TTS_SPEED },
   };
 }

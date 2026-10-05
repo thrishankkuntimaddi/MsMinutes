@@ -7,6 +7,10 @@ export type TurnTrace = {
   totalMs: number;
   llmCalls: number;
   expressions: string[];
+  /** Body actions asked for with tags, e.g. "jump". */
+  actions: string[];
+  /** Time from the start of the turn until her first audio, when the brain speaks. */
+  firstAudioMs?: number | null;
   stopReason: string | null;
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number };
   error?: string;

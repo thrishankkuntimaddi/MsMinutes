@@ -21,6 +21,8 @@ export type GatewayDeps = {
   /** Live connections by bodyId, shared across all connections. */
   connections: Map<string, BodyConnection>;
   log: FastifyBaseLogger;
+  /** The brain has a voice, so bodies that can play audio get it instead of using their own. */
+  speaks?: boolean;
 };
 
 type Hello = Extract<BodyToBrainMessage, { type: "hello" }>;
@@ -152,6 +154,9 @@ export class BodyConnection {
           // Phase 0: every declared capability is permitted. The policy gate replaces this (ADR-0006).
           permissions: hello.payload.capabilities.map((c) => c.name),
           heartbeatIntervalMs: config.heartbeatIntervalMs,
+          audio:
+            (this.#deps.speaks ?? false) &&
+            hello.payload.capabilities.some((c) => c.name === "speak.audio"),
         },
         hello.id,
       ),

@@ -20,6 +20,11 @@ export type ClaudeOptions = {
   client?: Anthropic;
 };
 
+/** The model can't be reached or used right now (bad credentials, server down, model missing). */
+export class LLMUnavailableError extends Error {
+  override name = "LLMUnavailableError";
+}
+
 /** Replies are spoken, so they're short; this leaves headroom for thinking. */
 const MAX_TOKENS = 16_000;
 

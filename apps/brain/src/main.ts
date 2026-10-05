@@ -13,6 +13,8 @@ process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
 await app.listen({ host: config.host, port: config.port });
+const model =
+  config.llmProvider === "ollama" ? `${config.ollama.model} via Ollama` : config.llm.model;
 app.log.info(
-  `Brain is awake as ${config.personaName}. Bodies connect to ws://${config.host}:${config.port}/ws`,
+  `Brain is awake as ${config.personaName} (thinking with ${model}). Bodies connect to ws://${config.host}:${config.port}/ws`,
 );
