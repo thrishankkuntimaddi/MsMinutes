@@ -67,6 +67,8 @@ Talking hands-free: with `STT_PROVIDER=local`, the brain also hears you (Moonshi
 
 Her memory: with `MEMORY_DB=./data/memory` she remembers you across conversations and restarts, in an embedded Postgres + pgvector (PGlite) under `data/`. No database server needed; or point `MEMORY_DB` at a `postgres://` URL (`docker compose -f infra/docker-compose.yml up -d`). See and edit what she remembers under **Her memories** in the browser, or via `GET /api/memories`.
 
+Her skills: ask her to set a timer ("tea, 4 minutes"), remind you of something ("remind me to call mom at 6:30"), or check the weather. Timers count down on her face and survive restarts; when one goes off, her bells ring and she tells you. Set `WEATHER_PLACE` in `.env` so "the weather" means where you are.
+
 Her poses and moves are on a check sheet at http://localhost:5179/poses.html.
 
 Her personality lives in [packages/persona/persona.md](packages/persona/persona.md). Edit it and restart the brain.

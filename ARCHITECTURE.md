@@ -5,7 +5,7 @@
 
 |              |                        |
 | ------------ | ---------------------- |
-| Status       | v0.5 (Phases 1–5 done) |
+| Status       | v0.6 (Phases 1–6 done) |
 | Last updated | 2026-10-05             |
 | Owner        | Thrishank              |
 
@@ -674,6 +674,7 @@ ADRs live in `docs/adr/` using the format: _Context → Decision → Consequence
 | 0009 | Neural TTS in the brain, streamed as audio                         | Accepted |
 | 0010 | Local hearing in the brain, VAD on the body, real barge-in         | Accepted |
 | 0011 | Long-term memory in Postgres + pgvector, embedded by default       | Accepted |
+| 0012 | Skills behind a policy gate; timers and reminders fire proactively | Accepted |
 
 ---
 
