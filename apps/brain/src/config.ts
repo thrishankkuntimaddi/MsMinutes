@@ -17,6 +17,8 @@ const Env = z.object({
   TTS_PROVIDER: z.enum(["none", "kokoro"]).default("none"),
   TTS_VOICE: z.string().min(1).default("af_heart"),
   TTS_SPEED: z.coerce.number().min(0.5).max(2).default(1),
+  STT_PROVIDER: z.enum(["none", "local"]).default("none"),
+  STT_MODEL: z.string().min(1).default("onnx-community/moonshine-base-ONNX"),
 });
 
 export type Config = {
@@ -36,6 +38,8 @@ export type Config = {
   ollama: { url: string; model: string };
   /** Her voice. "none" leaves speech to each body (e.g. the browser's own voices). */
   tts: { provider: z.infer<typeof Env>["TTS_PROVIDER"]; voice: string; speed: number };
+  /** Her hearing. "none" leaves speech recognition to each body (e.g. the browser's). */
+  stt: { provider: z.infer<typeof Env>["STT_PROVIDER"]; model: string };
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -58,5 +62,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     llmProvider: e.LLM_PROVIDER,
     ollama: { url: e.OLLAMA_URL, model: e.OLLAMA_MODEL },
     tts: { provider: e.TTS_PROVIDER, voice: e.TTS_VOICE, speed: e.TTS_SPEED },
+    stt: { provider: e.STT_PROVIDER, model: e.STT_MODEL },
   };
 }

@@ -4,6 +4,8 @@ export type LLMRequest = {
   system: string;
   tools: Anthropic.Beta.BetaTool[];
   messages: Anthropic.Beta.BetaMessageParam[];
+  /** Aborts the request mid-stream (barge-in). */
+  signal?: AbortSignal;
 };
 
 /**
@@ -41,19 +43,22 @@ export class ClaudeLLM implements LLM {
     // Created on first use so the brain still starts without credentials.
     // They resolve from ANTHROPIC_API_KEY (or an `ant auth login` profile).
     this.#client ??= new Anthropic();
-    const stream = this.#client.beta.messages.stream({
-      model: this.#options.model,
-      max_tokens: MAX_TOKENS,
-      output_config: { effort: this.#options.effort },
-      // If her model declines on policy grounds, the API retries on its default fallback model.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      // Caches the whole conversation prefix; history is append-only so it keeps hitting.
-      cache_control: { type: "ephemeral" },
-      system: request.system,
-      tools: request.tools,
-      messages: request.messages,
-    });
+    const stream = this.#client.beta.messages.stream(
+      {
+        model: this.#options.model,
+        max_tokens: MAX_TOKENS,
+        output_config: { effort: this.#options.effort },
+        // If her model declines on policy grounds, the API retries on its default fallback model.
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        // Caches the whole conversation prefix; history is append-only so it keeps hitting.
+        cache_control: { type: "ephemeral" },
+        system: request.system,
+        tools: request.tools,
+        messages: request.messages,
+      },
+      { signal: request.signal },
+    );
     stream.on("text", onText);
     return stream.finalMessage();
   }

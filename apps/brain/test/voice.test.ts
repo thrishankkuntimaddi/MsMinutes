@@ -171,3 +171,32 @@ describe("orchestrator with tags and a voice", () => {
     expect(note).toContain("[jump] [spin]");
   });
 });
+
+describe("KokoroTTS queue", () => {
+  it("skips a sentence whose turn was cancelled, without touching the model", async () => {
+    const { KokoroTTS } = await import("../src/modules/voice/tts.js");
+    const abort = new AbortController();
+    abort.abort();
+    await expect(new KokoroTTS({ voice: "x" }).synthesize("never", abort.signal)).rejects.toThrow(
+      /cancelled/,
+    );
+  });
+});
+
+describe("TagFilter commas", () => {
+  it("drops a comma left before punctuation by a dropped placeholder", () => {
+    const f = new TagFilter();
+    const text = ["That's fantastic, ", "[name]!", " Well, ", "done."]
+      .map((d) => f.push(d).text)
+      .join("");
+    expect(text + f.flush()).toBe("That's fantastic! Well, done.");
+  });
+});
+
+describe("TagFilter commas across a split tag", () => {
+  it("still drops the comma when the tag itself is split", () => {
+    const f = new TagFilter();
+    const text = ["That's fantastic, [na", "me]!"].map((d) => f.push(d).text).join("");
+    expect(text + f.flush()).toBe("That's fantastic!");
+  });
+});

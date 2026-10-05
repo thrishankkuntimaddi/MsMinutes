@@ -115,6 +115,7 @@ export class OllamaLLM implements LLM {
       response = await fetchFn(`${url.replace(/\/$/, "")}/api/chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: request.signal ?? null,
         body: JSON.stringify({
           model,
           stream: true,
@@ -131,7 +132,8 @@ export class OllamaLLM implements LLM {
           })),
         }),
       });
-    } catch {
+    } catch (err) {
+      if (request.signal?.aborted) throw err;
       throw new LLMUnavailableError(
         `Couldn't reach Ollama at ${url}. Start it with \`ollama serve\`.`,
       );

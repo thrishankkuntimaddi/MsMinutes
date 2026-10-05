@@ -5,7 +5,8 @@ export type Speech = { samples: Float32Array; sampleRate: number };
 export interface TTS {
   /** Loads models ahead of the first sentence. */
   warm(): Promise<void>;
-  synthesize(text: string): Promise<Speech>;
+  /** Queued work for an aborted signal is skipped, so a barge-in frees the voice at once. */
+  synthesize(text: string, signal?: AbortSignal): Promise<Speech>;
 }
 
 export type KokoroOptions = {
@@ -44,8 +45,9 @@ export class KokoroTTS implements TTS {
     await this.synthesize("Hello.");
   }
 
-  synthesize(text: string): Promise<Speech> {
+  synthesize(text: string, signal?: AbortSignal): Promise<Speech> {
     const run = this.#queue.then(async () => {
+      if (signal?.aborted) throw new DOMException("speech cancelled", "AbortError");
       const model = await this.#load();
       const { voice, speed } = this.#options;
       const out = await model.generate(text, { voice, ...(speed ? { speed } : {}) });

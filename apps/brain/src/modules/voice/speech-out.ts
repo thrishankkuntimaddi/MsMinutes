@@ -24,6 +24,9 @@ export class SpeechOut {
   #chain: Promise<void> = Promise.resolve();
   #seq = 0;
   #cancelled = false;
+  readonly #abort = new AbortController();
+  #onCancel: () => void = () => {};
+  readonly #cancelledSignal = new Promise<void>((resolve) => (this.#onCancel = resolve));
   /** ms from the first text to the first audio sent, for the turn trace. */
   firstAudioAt: number | null = null;
 
@@ -41,12 +44,15 @@ export class SpeechOut {
   /** Speaks whatever is left and resolves once all audio has been sent. */
   async finish(): Promise<void> {
     for (const sentence of this.#chunker.flush()) this.#speak(sentence);
-    await this.#chain;
+    // A cancelled turn ends now, not when synthesis already underway catches up.
+    await Promise.race([this.#chain, this.#cancelledSignal]);
   }
 
   /** Barge-in: drop everything not yet sent. */
   cancel(): void {
     this.#cancelled = true;
+    this.#abort.abort();
+    this.#onCancel();
   }
 
   get cancelled(): boolean {
@@ -56,9 +62,10 @@ export class SpeechOut {
   #speak(sentence: string): void {
     if (this.#cancelled) return;
     // Synthesis starts now; sending waits its turn so sentences stay in order.
-    const speech = this.#tts.synthesize(sentence);
+    const speech = this.#tts.synthesize(sentence, this.#abort.signal);
     speech.catch(() => undefined);
     this.#chain = this.#chain.then(async () => {
+      if (this.#cancelled) return;
       try {
         const { samples, sampleRate } = await speech;
         if (this.#cancelled) return;
@@ -79,6 +86,7 @@ export class SpeechOut {
         }
         this.firstAudioAt ??= performance.now();
       } catch (err) {
+        if (this.#cancelled) return;
         // One bad sentence shouldn't silence the rest; the text was still sent for captions.
         this.#log.warn({ err, sentence }, "speech synthesis failed");
       }

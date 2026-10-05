@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
     "@fastify/websocket": "^11.3.3",
+    "@huggingface/transformers": "3.8.1",
     "@ms-minutes/persona": "workspace:^",
     "@ms-minutes/protocol": "workspace:^",
     "fastify": "^5.12.5",

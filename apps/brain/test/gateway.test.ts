@@ -211,10 +211,14 @@ describe("body gateway", () => {
       const m = await body.next();
       if (m.type === "state.set") got.push(m.payload.mode);
       if (m.type === "expression.set") got.push(m.payload.affect);
-      if (m.type === "speech.text.delta") got.push(m.payload.text);
+      if (m.type === "speech.text.delta") {
+        // Deltas may be re-split (tags, held commas); the spoken text is what matters.
+        if (got.at(-1)?.startsWith("say:")) got[got.length - 1] += m.payload.text;
+        else got.push(`say:${m.payload.text}`);
+      }
       if (m.type === "state.set" && m.payload.mode === "idle") break;
     }
-    expect(got).toEqual(["thinking", "happy", "speaking", "Good morning, ", "Thrishank.", "idle"]);
+    expect(got).toEqual(["thinking", "happy", "speaking", "say:Good morning, Thrishank.", "idle"]);
 
     const res = await app.inject({ method: "GET", url: "/api/turns" });
     expect(res.json().turns[0]).toMatchObject({ bodyId: "desk-01", llmCalls: 2 });

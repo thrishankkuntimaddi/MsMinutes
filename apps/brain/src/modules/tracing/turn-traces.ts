@@ -11,6 +11,10 @@ export type TurnTrace = {
   actions: string[];
   /** Time from the start of the turn until her first audio, when the brain speaks. */
   firstAudioMs?: number | null;
+  /** Speech recognition time, when the turn came from her hearing you. */
+  sttMs?: number;
+  /** The user talked over her and the turn was cut short. */
+  interrupted?: boolean;
   stopReason: string | null;
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number };
   error?: string;

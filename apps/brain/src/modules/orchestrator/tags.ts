@@ -19,6 +19,7 @@ export class TagFilter {
   readonly #actions: ReadonlySet<string>;
   #pending = "";
   #endsWithSpace = false;
+  #heldComma = "";
 
   constructor(actions: Iterable<string> = []) {
     this.#actions = new Set(actions);
@@ -55,7 +56,16 @@ export class TagFilter {
       } else text += this.#pending.slice(0, close + 1);
       this.#pending = this.#pending.slice(close + 1);
     }
+    // A trailing comma waits for the next delta: if a dropped tag left it hanging
+    // before punctuation ("fantastic, [name]!"), it goes.
+    text = this.#heldComma + text;
+    this.#heldComma = "";
     text = tidy(text);
+    const comma = text.match(/,\s*$/);
+    if (comma) {
+      this.#heldComma = comma[0];
+      text = text.slice(0, -comma[0].length);
+    }
     // A removed tag can also leave a double space across two deltas.
     if (this.#endsWithSpace && text.startsWith(" ")) text = text.slice(1);
     if (text) this.#endsWithSpace = text.endsWith(" ");
@@ -64,8 +74,9 @@ export class TagFilter {
 
   /** The reply is over: release anything held back. */
   flush(): string {
-    const rest = this.#pending;
+    const rest = this.#heldComma + this.#pending;
     this.#pending = "";
+    this.#heldComma = "";
     return rest;
   }
 

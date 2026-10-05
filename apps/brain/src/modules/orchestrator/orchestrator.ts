@@ -53,8 +53,14 @@ export class Orchestrator {
   /** Append-only, so prompt caching and preserved thinking stay valid. Failed turns are cut off the tail. */
   readonly #history: Anthropic.Beta.BetaMessageParam[] = [];
   #queue: Promise<void> = Promise.resolve();
-  /** The turn being spoken right now, so a barge-in can silence it. */
-  #current: { bodyId: string; voice: SpeechOut | null } | null = null;
+  /** The turn running right now, so a barge-in can cut it short. */
+  #current: {
+    bodyId: string;
+    voice: SpeechOut | null;
+    abort: AbortController;
+    /** What she has said so far this turn, tags removed. */
+    spoken: string;
+  } | null = null;
 
   constructor(deps: OrchestratorDeps) {
     this.#deps = deps;
@@ -63,20 +69,42 @@ export class Orchestrator {
   attach(bus: EventBus): void {
     bus.on("body.message", ({ bodyId, message }) => {
       if (message.type === "event.utterance.text") void this.enqueue(bodyId, message.payload.text);
-      if (message.type === "event.interrupt" && this.#current?.bodyId === bodyId) {
-        this.#current.voice?.cancel();
-      }
+      if (message.type === "event.interrupt") this.interrupt(bodyId);
     });
   }
 
+  /** Barge-in: the user started talking over her. Stop thinking and stop speaking. */
+  interrupt(bodyId: string): void {
+    if (this.#current?.bodyId !== bodyId) return;
+    this.#deps.log.info({ bodyId }, "barge-in: stopping her");
+    this.#current.voice?.cancel();
+    this.#current.abort.abort();
+  }
+
+  /** What she said lately to this body (tags removed), to recognise her own voice as echo. */
+  recentSpeech(bodyId: string): string {
+    const now = this.#current?.bodyId === bodyId ? this.#current.spoken : "";
+    const past = this.#history
+      .filter((m) => m.role === "assistant")
+      .slice(-2)
+      .flatMap((m) =>
+        typeof m.content === "string"
+          ? [m.content]
+          : m.content.flatMap((b) => (b.type === "text" ? [b.text] : [])),
+      )
+      .join(" ")
+      .replace(/\[[^\]]*\]/g, " ");
+    return `${past} ${now}`;
+  }
+
   /** Turns run one at a time: one brain, one voice. */
-  enqueue(bodyId: string, text: string): Promise<void> {
-    const turn = this.#queue.then(() => this.#runTurn(bodyId, text));
+  enqueue(bodyId: string, text: string, meta: { sttMs?: number } = {}): Promise<void> {
+    const turn = this.#queue.then(() => this.#runTurn(bodyId, text, meta));
     this.#queue = turn;
     return turn;
   }
 
-  async #runTurn(bodyId: string, text: string): Promise<void> {
+  async #runTurn(bodyId: string, text: string, meta: { sttMs?: number }): Promise<void> {
     const { llm, systemPrompt, traces, log } = this.#deps;
     const turnId = randomUUID();
     const started = performance.now();
@@ -95,6 +123,7 @@ export class Orchestrator {
       actions: [],
       stopReason: null,
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      ...(meta.sttMs === undefined ? {} : { sttMs: meta.sttMs }),
     };
 
     const body = this.#deps.registry.get(bodyId);
@@ -103,7 +132,10 @@ export class Orchestrator {
       this.#deps.tts && body?.capabilities.some((c) => c.name === SPEAK_AUDIO)
         ? new SpeechOut(this.#deps.tts, turnId, say, log)
         : null;
-    this.#current = { bodyId, voice };
+    const current = { bodyId, voice, abort: new AbortController(), spoken: "" };
+    this.#current = current;
+    /** Raw model text of the call in flight, kept if she's interrupted mid-sentence. */
+    let partial = "";
 
     const turnStart = this.#history.length;
     let speaking = false;
@@ -124,6 +156,7 @@ export class Orchestrator {
       firstDeltaOfCall = false;
       say("speech.text.delta", { turnId, text });
       voice?.push(text);
+      current.spoken += text;
     };
     say("state.set", { mode: "thinking" });
     this.#history.push({
@@ -141,9 +174,12 @@ export class Orchestrator {
         trace.llmCalls = call;
 
         firstDeltaOfCall = true;
+        partial = "";
         const message = await llm.stream(
-          { system: systemPrompt, tools, messages: this.#history },
+          { system: systemPrompt, tools, messages: this.#history, signal: current.abort.signal },
           (delta) => {
+            if (current.abort.signal.aborted) return;
+            partial += delta;
             const found = tags.push(delta);
             for (const tag of found.tags) this.#applyTag(tag, bodyId, trace);
             speak(found.text);
@@ -174,6 +210,17 @@ export class Orchestrator {
         this.#history.push({ role: "user", content: results });
       }
     } catch (error) {
+      if (current.abort.signal.aborted) {
+        // Interrupted: keep what was said, cut off, so she knows where she stopped.
+        // (Consecutive user turns are fine; the API merges them.)
+        trace.interrupted = true;
+        const said = partial.trimEnd();
+        if (said) {
+          this.#history.push({ role: "assistant", content: [{ type: "text", text: `${said}—` }] });
+        }
+        log.info({ turnId, bodyId }, "turn interrupted");
+        return;
+      }
       // Drop the failed turn so the next one starts from a valid, cache-friendly history.
       this.#history.length = turnStart;
       trace.error = describe(error);
@@ -209,8 +256,9 @@ export class Orchestrator {
     } finally {
       // Her voice may still be catching up with the text; the turn ends when she does.
       await voice?.finish();
+      if (voice?.cancelled || current.abort.signal.aborted) trace.interrupted = true;
       if (voice?.firstAudioAt) trace.firstAudioMs = Math.round(voice.firstAudioAt - started);
-      if (this.#current?.voice === voice) this.#current = null;
+      if (this.#current === current) this.#current = null;
       if (speaking) say("speech.end", { turnId });
       say("state.set", { mode: "idle" });
       trace.totalMs = elapsed();

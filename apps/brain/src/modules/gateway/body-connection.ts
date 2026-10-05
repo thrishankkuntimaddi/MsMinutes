@@ -23,6 +23,8 @@ export type GatewayDeps = {
   log: FastifyBaseLogger;
   /** The brain has a voice, so bodies that can play audio get it instead of using their own. */
   speaks?: boolean;
+  /** The brain can transcribe audio, so bodies that can listen send it their microphone. */
+  hears?: boolean;
 };
 
 type Hello = Extract<BodyToBrainMessage, { type: "hello" }>;
@@ -157,6 +159,9 @@ export class BodyConnection {
           audio:
             (this.#deps.speaks ?? false) &&
             hello.payload.capabilities.some((c) => c.name === "speak.audio"),
+          hearing:
+            (this.#deps.hears ?? false) &&
+            hello.payload.capabilities.some((c) => c.name === "listen"),
         },
         hello.id,
       ),
