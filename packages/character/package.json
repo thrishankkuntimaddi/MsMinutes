@@ -1,0 +1,13 @@
+{
+  "name": "@ms-minutes/character",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Her face as a parameter rig: presets, springs, idle life, lip-sync. Renderer-agnostic.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ms-minutes/protocol": "workspace:^"
+  }
+}
