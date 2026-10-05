@@ -19,6 +19,11 @@ const Env = z.object({
   TTS_SPEED: z.coerce.number().min(0.5).max(2).default(1),
   STT_PROVIDER: z.enum(["none", "local"]).default("none"),
   STT_MODEL: z.string().min(1).default("onnx-community/moonshine-base-ONNX"),
+  MEMORY_DB: z.string().default("off"),
+  MEMORY_MODEL: z.string().min(1).optional(),
+  MEMORY_GAP_MINUTES: z.coerce.number().min(0).default(30),
+  EMBED_PROVIDER: z.enum(["ollama", "local"]).optional(),
+  EMBED_MODEL: z.string().min(1).optional(),
 });
 
 export type Config = {
@@ -40,6 +45,18 @@ export type Config = {
   tts: { provider: z.infer<typeof Env>["TTS_PROVIDER"]; voice: string; speed: number };
   /** Her hearing. "none" leaves speech recognition to each body (e.g. the browser's). */
   stt: { provider: z.infer<typeof Env>["STT_PROVIDER"]; model: string };
+  /**
+   * Long-term memory. `db` is "off", a PGlite directory, "memory://", or a postgres:// URL.
+   * The extraction model defaults to Claude Haiku 4.5 (or the Ollama model when local);
+   * embeddings to nomic-embed-text via Ollama when it's the provider, else a local model.
+   */
+  memory: {
+    db: string;
+    /** A pause longer than this starts a new conversation. */
+    gapMinutes: number;
+    model: string;
+    embed: { provider: "ollama" | "local"; model: string };
+  };
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -63,5 +80,21 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     ollama: { url: e.OLLAMA_URL, model: e.OLLAMA_MODEL },
     tts: { provider: e.TTS_PROVIDER, voice: e.TTS_VOICE, speed: e.TTS_SPEED },
     stt: { provider: e.STT_PROVIDER, model: e.STT_MODEL },
+    memory: memoryConfig(e),
+  };
+}
+
+function memoryConfig(e: z.infer<typeof Env>): Config["memory"] {
+  const local = e.LLM_PROVIDER === "ollama";
+  const provider = e.EMBED_PROVIDER ?? (local ? "ollama" : "local");
+  return {
+    db: e.MEMORY_DB.trim() || "off",
+    gapMinutes: e.MEMORY_GAP_MINUTES,
+    model: e.MEMORY_MODEL ?? (local ? e.OLLAMA_MODEL : "claude-haiku-4-5"),
+    embed: {
+      provider,
+      model:
+        e.EMBED_MODEL ?? (provider === "ollama" ? "nomic-embed-text" : "Xenova/all-MiniLM-L6-v2"),
+    },
   };
 }

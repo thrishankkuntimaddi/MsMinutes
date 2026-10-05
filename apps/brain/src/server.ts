@@ -1,5 +1,5 @@
 import websocket from "@fastify/websocket";
-import Fastify from "fastify";
+import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { buildSystemPrompt } from "@ms-minutes/persona";
 import { PROTOCOL_VERSION } from "@ms-minutes/protocol";
 import type { Config } from "./config.js";
@@ -11,6 +11,12 @@ import { OllamaLLM } from "./modules/llm/ollama.js";
 import { Orchestrator } from "./modules/orchestrator/orchestrator.js";
 import { MOOD_TAG_INSTRUCTIONS } from "./modules/orchestrator/tags.js";
 import { tools } from "./modules/orchestrator/tools.js";
+import { migrate, openDb } from "./modules/memory/db.js";
+import { LocalEmbedder, OllamaEmbedder } from "./modules/memory/embedder.js";
+import { ClaudeExtractor, OllamaExtractor } from "./modules/memory/extractor.js";
+import { MemoryService } from "./modules/memory/memory.js";
+import { registerMemoryRoutes } from "./modules/memory/routes.js";
+import { MemoryStore } from "./modules/memory/store.js";
 import { Hearing } from "./modules/voice/hearing.js";
 import { LocalSTT, type STT } from "./modules/voice/stt.js";
 import { KokoroTTS, type TTS } from "./modules/voice/tts.js";
@@ -25,6 +31,8 @@ export type ServerOptions = {
   tts?: TTS;
   /** Overrides the configured hearing (tests use a fake). */
   stt?: STT;
+  /** Overrides the configured memory (tests use one over an in-memory database). */
+  memory?: MemoryService;
 };
 
 export async function buildServer(config: Config, options: ServerOptions = {}) {
@@ -93,6 +101,10 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
     );
   }
 
+  const memory = options.memory ?? (await createMemory(config, app));
+  const resumed = memory ? await memory.start() : [];
+  if (memory) registerMemoryRoutes(app, memory);
+
   const orchestrator = new Orchestrator({
     llm,
     send,
@@ -100,10 +112,15 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
     traces,
     systemPrompt,
     tts,
+    ...(memory ? { memory } : {}),
     timezone: config.timezone,
     log: app.log,
   });
   orchestrator.attach(bus);
+  if (resumed.length) {
+    orchestrator.preload(resumed);
+    app.log.info({ turns: resumed.length }, "continuing the conversation from before the restart");
+  }
   if (stt) {
     new Hearing({
       stt,
@@ -130,4 +147,41 @@ function createTTS(config: Config): TTS | undefined {
 
 function createSTT(config: Config): STT | undefined {
   return config.stt.provider === "local" ? new LocalSTT(config.stt.model) : undefined;
+}
+
+async function createMemory(
+  config: Config,
+  app: { log: FastifyBaseLogger; addHook: FastifyInstance["addHook"] },
+): Promise<MemoryService | undefined> {
+  const m = config.memory;
+  if (m.db === "off") return undefined;
+  const db = await openDb(m.db);
+  await migrate(db);
+  const embedder =
+    m.embed.provider === "ollama"
+      ? new OllamaEmbedder(config.ollama.url, m.embed.model)
+      : new LocalEmbedder(m.embed.model);
+  const extractor =
+    config.llmProvider === "ollama"
+      ? new OllamaExtractor(config.ollama.url, m.model)
+      : new ClaudeExtractor(m.model);
+  const memory = new MemoryService({
+    store: new MemoryStore(db),
+    embedder,
+    extractor,
+    userName: config.userName,
+    timezone: config.timezone,
+    log: app.log,
+    gapMinutes: m.gapMinutes,
+  });
+  app.addHook("onClose", async () => {
+    // Let in-flight memory writes land, but don't hang shutdown on a slow model.
+    await Promise.race([memory.idle(), new Promise((r) => setTimeout(r, 5000))]);
+    await db.close();
+  });
+  app.log.info(
+    { db: m.db.replace(/:[^:@/]+@/, ":***@"), extractor: m.model, embedder: embedder.model },
+    "memory is on",
+  );
+  return memory;
 }

@@ -10,6 +10,7 @@ import { LLMUnavailableError, type LLM } from "../llm/llm.js";
 import type { TurnTrace, TurnTraces } from "../tracing/turn-traces.js";
 import { SpeechOut } from "../voice/speech-out.js";
 import type { TTS } from "../voice/tts.js";
+import type { TurnRecord } from "../memory/memory.js";
 import { actionNote, TagFilter, type Tag } from "./tags.js";
 import { SET_EXPRESSION, SetExpressionInput, tools } from "./tools.js";
 
@@ -23,6 +24,11 @@ export type OrchestratorDeps = {
   log: FastifyBaseLogger;
   /** When set, the brain speaks: bodies that can play audio get her synthesized voice. */
   tts?: TTS;
+  /** Long-term memory: recalled before each turn, written after it. */
+  memory?: {
+    recall(text: string): Promise<{ note: string; fresh: boolean }>;
+    remember(turn: TurnRecord): Promise<void>;
+  };
   now?: () => Date;
 };
 
@@ -34,6 +40,8 @@ export const ANIMATE = "animate";
 /** Upper bound on model calls in one turn (each tool round is one call). */
 const MAX_LLM_CALLS_PER_TURN = 4;
 const EXPRESSION_TRANSITION_MS = 300;
+/** Memory lookup gets this long before she answers without it. */
+const RECALL_TIMEOUT_MS = 1500;
 /** More than this many moves in one reply is fidgeting, not expression. */
 const MAX_ACTIONS_PER_TURN = 2;
 /** Spoken when the model declines and no fallback model could answer. */
@@ -71,6 +79,16 @@ export class Orchestrator {
       if (message.type === "event.utterance.text") void this.enqueue(bodyId, message.payload.text);
       if (message.type === "event.interrupt") this.interrupt(bodyId);
     });
+  }
+
+  /** Continues a conversation that was in progress before a restart. */
+  preload(turns: { userText: string; replyText: string }[]): void {
+    for (const t of turns) {
+      this.#history.push({ role: "user", content: [{ type: "text", text: t.userText }] });
+      if (t.replyText) {
+        this.#history.push({ role: "assistant", content: [{ type: "text", text: t.replyText }] });
+      }
+    }
   }
 
   /** Barge-in: the user started talking over her. Stop thinking and stop speaking. */
@@ -159,10 +177,17 @@ export class Orchestrator {
       current.spoken += text;
     };
     say("state.set", { mode: "thinking" });
+    const { note: memoryNote, fresh } = await this.#recall(text);
+    if (fresh && this.#history.length) {
+      // A new conversation after a long gap: start the working context over. What
+      // mattered lives on in her memories and last conversation's summary.
+      this.#history.length = 0;
+      log.info({ bodyId }, "new conversation");
+    }
     this.#history.push({
       role: "user",
       content: [
-        { type: "text", text: this.#contextNote(bodyId) },
+        { type: "text", text: [this.#contextNote(bodyId), memoryNote].filter(Boolean).join("\n") },
         { type: "text", text },
       ],
     });
@@ -264,6 +289,10 @@ export class Orchestrator {
       trace.totalMs = elapsed();
       traces.add(trace);
       log.info({ trace }, "turn completed");
+      const reply = current.spoken.trim();
+      if (this.#deps.memory && (reply || trace.interrupted)) {
+        void this.#deps.memory.remember({ bodyId, userText: text, replyText: reply, trace });
+      }
     }
   }
 
@@ -296,6 +325,26 @@ export class Orchestrator {
     );
     trace.expressions.push(`${affect}:${intensity}`);
     return result("shown");
+  }
+
+  async #recall(text: string): Promise<{ note: string; fresh: boolean }> {
+    const none = { note: "", fresh: false };
+    const memory = this.#deps.memory;
+    if (!memory) return none;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        memory.recall(text),
+        new Promise<typeof none>((resolve) => {
+          timer = setTimeout(() => resolve(none), RECALL_TIMEOUT_MS);
+        }),
+      ]);
+    } catch (err) {
+      this.#deps.log.warn({ err }, "memory recall failed");
+      return none;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /** A mood or action tag from her reply text. */

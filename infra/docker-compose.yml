@@ -1,0 +1,16 @@
+# Postgres with pgvector for her memory, when you'd rather run a server than the embedded
+# PGlite default. Start it, then set in .env:
+#   MEMORY_DB=postgres://minutes:minutes@127.0.0.1:5432/minutes
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: minutes
+      POSTGRES_PASSWORD: minutes
+      POSTGRES_DB: minutes
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - memory:/var/lib/postgresql/data
+volumes:
+  memory:

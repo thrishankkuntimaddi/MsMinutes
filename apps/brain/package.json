@@ -11,16 +11,20 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-pgvector": "^0.0.9",
     "@fastify/websocket": "^11.3.3",
     "@huggingface/transformers": "3.8.1",
     "@ms-minutes/persona": "workspace:^",
     "@ms-minutes/protocol": "workspace:^",
     "fastify": "^5.12.5",
     "kokoro-js": "^1.2.1",
+    "pg": "^8",
     "ws": "^8.22.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
     "@types/ws": "^8.18.2"
   }
 }
