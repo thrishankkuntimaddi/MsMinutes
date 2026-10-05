@@ -70,9 +70,44 @@
         <p class="status">
           <span class="dot" id="dot"></span><span id="status">Connecting to her brain…</span>
           <button type="button" class="link" id="replay">↺ Replay intro</button>
+          <button type="button" class="link" id="open-memories">Her memories</button>
         </p>
       </section>
     </main>
+
+    <dialog class="memories" id="memories" aria-labelledby="memories-title">
+      <header>
+        <p class="stamp">TVA · Case file</p>
+        <h2 id="memories-title">What she remembers about you</h2>
+        <button type="button" class="close" id="close-memories" aria-label="Close">✕</button>
+      </header>
+      <p class="hint">
+        She keeps these from your conversations. Edit anything that's wrong, delete anything you'd
+        rather she forgot. Changes apply to her next reply.
+      </p>
+      <ul class="memory-list" id="memory-list"></ul>
+      <form class="memory-add" id="memory-add" autocomplete="off">
+        <select id="memory-kind" aria-label="Kind">
+          <option value="fact">fact</option>
+          <option value="preference">preference</option>
+          <option value="person">person</option>
+          <option value="event">event</option>
+          <option value="plan">plan</option>
+          <option value="routine">routine</option>
+        </select>
+        <input
+          id="memory-text"
+          type="text"
+          placeholder="Tell her something to remember…"
+          maxlength="500"
+        />
+        <button type="submit">Add</button>
+      </form>
+      <footer>
+        <span id="memory-count"></span>
+        <button type="button" class="danger" id="forget-all">Forget everything</button>
+      </footer>
+    </dialog>
 
     <div class="gate" id="gate">
       <div class="seal" aria-hidden="true">

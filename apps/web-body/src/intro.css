@@ -737,3 +737,208 @@ body {
     animation: none;
   }
 }
+
+/* ---------- Her memories (a TVA case file) ---------- */
+
+.memories {
+  width: min(92vw, 640px);
+  max-height: 82vh;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  color: #3a1d0a;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 27px, rgba(150, 100, 50, 0.12) 27px 28px),
+    linear-gradient(180deg, #f6e7c8, #ead6ad);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(120, 70, 20, 0.25);
+  font-family: "Oswald", "Helvetica Neue", Arial, sans-serif;
+}
+
+.memories::backdrop {
+  background: rgba(10, 5, 2, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.memories header {
+  position: relative;
+  padding: 18px 22px 6px;
+  border-bottom: 2px solid rgba(160, 60, 20, 0.35);
+}
+
+.memories .stamp {
+  display: inline-block;
+  margin: 0 0 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b0401a;
+  border: 2px solid #b0401a;
+  border-radius: 4px;
+  transform: rotate(-2deg);
+}
+
+.memories h2 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 22px;
+}
+
+.memories .close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: none;
+  font-size: 18px;
+  color: #6a3a18;
+  cursor: pointer;
+}
+
+.memories .hint {
+  margin: 10px 22px;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  color: #6a4a2a;
+}
+
+.memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.memory-list li {
+  display: grid;
+  grid-template-columns: 86px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-bottom: 1px dashed rgba(120, 70, 20, 0.3);
+  transition: background 0.3s;
+}
+
+.memory-list li.saved {
+  background: rgba(120, 200, 100, 0.25);
+}
+
+.memory-list li.empty {
+  display: block;
+  padding: 18px 8px;
+  font-family: Georgia, serif;
+  color: #7a5a3a;
+}
+
+.memory-list .kind {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff6e6;
+  background: #8a5a2a;
+}
+
+.memory-list .kind.person {
+  background: #b0401a;
+}
+.memory-list .kind.preference {
+  background: #2f7a5a;
+}
+.memory-list .kind.plan,
+.memory-list .kind.event {
+  background: #3a5a9a;
+}
+
+.memory-list textarea {
+  width: 100%;
+  resize: none;
+  field-sizing: content;
+  border: 0;
+  background: transparent;
+  font:
+    15px/1.35 Georgia,
+    serif;
+  color: #2a1406;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.memory-list textarea:focus {
+  outline: 2px solid rgba(176, 64, 26, 0.5);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.memory-list .meta {
+  font-size: 11px;
+  color: #a0703a;
+  white-space: nowrap;
+}
+
+.memories button.delete,
+.memories footer .danger,
+.memory-add button {
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid rgba(120, 70, 20, 0.45);
+  background: rgba(255, 255, 255, 0.4);
+  color: #6a3a18;
+}
+
+.memories button.delete:hover,
+.memories footer .danger:hover {
+  color: #fff;
+  background: #b0401a;
+  border-color: #b0401a;
+}
+
+.memory-add {
+  display: flex;
+  gap: 8px;
+  padding: 12px 22px;
+}
+
+.memory-add select,
+.memory-add input {
+  font:
+    15px Georgia,
+    serif;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(120, 70, 20, 0.45);
+  background: rgba(255, 255, 255, 0.6);
+  color: #2a1406;
+}
+
+.memory-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.memories footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 22px 16px;
+  font-size: 13px;
+  color: #7a5a3a;
+}
+
+@media (max-width: 640px) {
+  .memory-list li {
+    grid-template-columns: 1fr auto;
+  }
+  .memory-list .kind,
+  .memory-list .meta {
+    grid-column: 1 / -1;
+  }
+}

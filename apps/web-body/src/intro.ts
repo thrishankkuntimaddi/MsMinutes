@@ -6,6 +6,7 @@ import type { BodyMode, BrainToBodyMessage } from "@ms-minutes/protocol";
 import { BrainLink, type LinkStatus } from "./brain.js";
 import { Fx } from "./fx.js";
 import { Listener } from "./listener.js";
+import { setupMemories } from "./memories.js";
 import { ClockRenderer } from "./renderer.js";
 import { Speaker } from "./speaker.js";
 import { VoiceQueue } from "./voice-queue.js";
@@ -604,3 +605,4 @@ $("begin").addEventListener("click", async () => {
 });
 
 $("replay").addEventListener("click", () => void orientation());
+setupMemories();

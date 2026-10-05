@@ -53,6 +53,6 @@ export default defineConfig({
   server: {
     port: 5179,
     // The page talks to the brain on its own origin; Vite forwards the socket.
-    proxy: { "/ws": { target: brain, ws: true } },
+    proxy: { "/ws": { target: brain, ws: true }, "/api": { target: brain } },
   },
 });
