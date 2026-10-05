@@ -44,6 +44,7 @@ function frame(now: number): void {
   const dt = (now - last) / 1000;
   last = now;
   rig.setViseme(audio?.sample() ?? speaker.sample(now));
+  showTimers();
   const f = rig.update(dt);
   if (visible) renderer.draw(f);
   if (staticOn) drawStatic();
@@ -242,6 +243,16 @@ function onMessage(message: BrainToBodyMessage): void {
       break;
     case "capability.call": {
       const { callId, name, args } = message.payload;
+      if (name === "display.timer") {
+        timers = Array.isArray(args.timers) ? (args.timers as ShownTimer[]) : [];
+        link.result(callId, true);
+        break;
+      }
+      if (name === "alarm.ring") {
+        ring(String(args.label ?? ""));
+        link.result(callId, true);
+        break;
+      }
       const action = String(args.action ?? "");
       if (name === "animate" && isAction(action) && !turnIgnored) {
         rig.act(action);
@@ -263,6 +274,77 @@ function onMessage(message: BrainToBodyMessage): void {
     default:
       break;
   }
+}
+
+// ---------- Timers on her face (Phase 6) ----------
+
+type ShownTimer = {
+  id: string;
+  kind: "timer" | "reminder";
+  label: string;
+  endsAt: number;
+  durationSec: number | null;
+};
+
+/** What the brain says is running. */
+let timers: ShownTimer[] = [];
+/** A timer that just went off, flashing until she's said so. */
+let ringingUntil = 0;
+let lcdText = "";
+
+const clock = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
+};
+
+function showTimers(): void {
+  const now = Date.now();
+  const ringing = now < ringingUntil;
+  const running = timers.filter((t) => t.kind === "timer" && t.durationSec);
+  const next = running[0];
+  renderer.timer = ringing
+    ? { remaining: 0, ringing: true }
+    : next
+      ? { remaining: (next.endsAt - now) / (next.durationSec! * 1000), ringing: false }
+      : null;
+
+  const lcd = $("lcd");
+  const text = ringing
+    ? "⏰ <b>TIME!</b>"
+    : next
+      ? `⏱ <b>${clock(next.endsAt - now)}</b> ${escapeHtml(next.label)}${running.length > 1 ? ` +${running.length - 1}` : ""}`
+      : "";
+  if (text !== lcdText) {
+    lcdText = text;
+    lcd.innerHTML = text;
+    lcd.hidden = !text;
+    lcd.classList.toggle("ringing", ringing);
+  }
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
+
+/** Her alarm: bells, a jump, a flash. She speaks about it right after. */
+function ring(label: string): void {
+  ringingUntil = Date.now() + 3200;
+  rig.setExpression("excited", 0.9);
+  rig.ring(2.8);
+  rig.act("jump");
+  for (let i = 0; i < 3; i++) setTimeout(() => fx.bell(0.8), i * 1000);
+  // Her bells shouldn't count as someone talking.
+  ears.setSheIsTalking(true);
+  setTimeout(() => ears.setSheIsTalking(talking()), 3300);
+  screen.classList.remove("ringing");
+  void screen.offsetWidth;
+  screen.classList.add("ringing");
+  console.info(`alarm: ${label}`);
 }
 
 /** Big feelings move her whole body, not just her face. */

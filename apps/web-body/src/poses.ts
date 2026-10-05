@@ -1,9 +1,15 @@
 // A sheet of her poses for checking the renderer: every emotion, then movement.
 import { CharacterRig, VISEMES, type Action } from "@ms-minutes/character";
 import { Affect } from "@ms-minutes/protocol";
-import { ClockRenderer } from "./renderer.js";
+import { ClockRenderer, type TimerFace } from "./renderer.js";
 
-type Shot = { label: string; setup: (rig: CharacterRig) => void; seconds: number; talk?: boolean };
+type Shot = {
+  label: string;
+  setup: (rig: CharacterRig) => void;
+  seconds: number;
+  talk?: boolean;
+  timer?: TimerFace;
+};
 
 const still = (rig: CharacterRig) => {
   rig.motion.autopilot = false;
@@ -23,6 +29,18 @@ const shots: Shot[] = [
     seconds: 1,
     talk: true,
     setup: (rig) => (still(rig), rig.setExpression("happy", 0.6)),
+  },
+  {
+    label: "timer",
+    seconds: 1,
+    timer: { remaining: 0.62, ringing: false },
+    setup: (rig) => (still(rig), rig.setExpression("happy", 0.6)),
+  },
+  {
+    label: "timer ringing",
+    seconds: 1,
+    timer: { remaining: 0, ringing: true },
+    setup: (rig) => (still(rig), rig.setExpression("excited", 0.9), rig.ring(3)),
   },
   ...(
     [
@@ -69,5 +87,9 @@ for (const shot of shots.filter((s) => !only || only.includes(s.label))) {
   let frame = rig.update(0);
   for (let t = 0; t < shot.seconds; t += 1 / 60)
     frame = rig.update(1 / 60, new Date(2026, 0, 1, 10, 10));
-  requestAnimationFrame(() => new ClockRenderer(canvas).draw(frame));
+  requestAnimationFrame(() => {
+    const renderer = new ClockRenderer(canvas);
+    renderer.timer = shot.timer ?? null;
+    renderer.draw(frame);
+  });
 }

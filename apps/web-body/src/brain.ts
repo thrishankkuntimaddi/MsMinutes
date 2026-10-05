@@ -61,6 +61,12 @@ export class BrainLink {
               riskTier: 0,
             },
             { name: "listen", description: "Hear the user through the microphone", riskTier: 2 },
+            { name: "display.timer", description: "Show running timers on her face", riskTier: 0 },
+            {
+              name: "alarm.ring",
+              description: "Ring her bells when a timer or reminder fires",
+              riskTier: 0,
+            },
             { name: "express", description: "Show an emotion on her face", riskTier: 0 },
           ],
         }),

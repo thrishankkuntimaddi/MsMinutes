@@ -36,7 +36,12 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 type Pt = { x: number; y: number };
 
 /** Draws Miss Minutes and her little stage on a 2D canvas, crisp at any pixel density. */
+/** A running timer as she shows it: the rim sweeps down as time runs out. */
+export type TimerFace = { remaining: number; ringing: boolean };
+
 export class ClockRenderer {
+  /** Set by the page each frame; null when no timer is running. */
+  timer: TimerFace | null = null;
   readonly #canvas: HTMLCanvasElement;
   readonly #ctx: CanvasRenderingContext2D;
   #view = { x: W / 2, y: FLOOR - FEET * BASE_SCALE, s: BASE_SCALE };
@@ -319,6 +324,7 @@ export class ClockRenderer {
     ctx.stroke();
 
     this.#ticks();
+    this.#countdown(f);
 
     // Leaning toward you tips her features down a little.
     ctx.save();
@@ -335,6 +341,46 @@ export class ClockRenderer {
     ctx.fill();
     this.#mouth(f);
     this.#tear(f);
+    ctx.restore();
+  }
+
+  /** Remaining time as a glowing arc on her rim, from 12 o'clock clockwise. */
+  #countdown(f: RigFrame): void {
+    const timer = this.timer;
+    if (!timer) return;
+    const ctx = this.#ctx;
+    ctx.save();
+    ctx.lineCap = "round";
+    if (timer.ringing) {
+      // Ringing: the whole rim flashes.
+      const on = Math.sin(f.t * 18) > 0;
+      ctx.strokeStyle = on ? "rgba(255,70,30,0.95)" : "rgba(255,230,120,0.9)";
+      ctx.shadowColor = "rgba(255,90,30,0.9)";
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(0, 0, R - 5, 0, TAU);
+      ctx.stroke();
+    } else {
+      const start = -Math.PI / 2;
+      const end = start + TAU * Math.max(0.002, Math.min(1, timer.remaining));
+      ctx.strokeStyle = "rgba(90,20,5,0.35)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(0, 0, R - 5, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = "#ff4a1c";
+      ctx.shadowColor = "rgba(255,80,30,0.85)";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, R - 5, start, end);
+      ctx.stroke();
+      // The moving end, like a second hand's tip.
+      ctx.fillStyle = "#fff3c4";
+      ctx.beginPath();
+      ctx.arc(Math.cos(end) * (R - 5), Math.sin(end) * (R - 5), 3.6, 0, TAU);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
