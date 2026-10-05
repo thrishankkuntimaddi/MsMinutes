@@ -11,6 +11,8 @@ import type { TurnTrace, TurnTraces } from "../tracing/turn-traces.js";
 import { SpeechOut } from "../voice/speech-out.js";
 import type { TTS } from "../voice/tts.js";
 import type { TurnRecord } from "../memory/memory.js";
+import { backstop } from "../skills/builtin/backstop.js";
+import type { SkillRegistry } from "../skills/registry.js";
 import { actionNote, TagFilter, type Tag } from "./tags.js";
 import { SET_EXPRESSION, SetExpressionInput, tools } from "./tools.js";
 
@@ -24,6 +26,8 @@ export type OrchestratorDeps = {
   log: FastifyBaseLogger;
   /** When set, the brain speaks: bodies that can play audio get her synthesized voice. */
   tts?: TTS;
+  /** Server-side skills (timers, weather…), presented to the model as tools (§12). */
+  skills?: SkillRegistry;
   /** Long-term memory: recalled before each turn, written after it. */
   memory?: {
     recall(text: string): Promise<{ note: string; fresh: boolean }>;
@@ -70,8 +74,12 @@ export class Orchestrator {
     spoken: string;
   } | null = null;
 
+  /** Her face plus every skill. Fixed for the brain's life so the prompt cache holds. */
+  readonly tools: Anthropic.Beta.BetaTool[];
+
   constructor(deps: OrchestratorDeps) {
     this.#deps = deps;
+    this.tools = [...tools, ...(deps.skills?.tools() ?? [])];
   }
 
   attach(bus: EventBus): void {
@@ -116,13 +124,29 @@ export class Orchestrator {
   }
 
   /** Turns run one at a time: one brain, one voice. */
-  enqueue(bodyId: string, text: string, meta: { sttMs?: number } = {}): Promise<void> {
+  /**
+   * Something happened that she should tell the person about (a timer went off, a
+   * reminder came due): a turn with no utterance, only the event (§3.2, §12.2).
+   */
+  enqueueEvent(bodyId: string, event: string): Promise<void> {
+    return this.enqueue(bodyId, `<event>${event}</event>`, { proactive: true });
+  }
+
+  enqueue(
+    bodyId: string,
+    text: string,
+    meta: { sttMs?: number; proactive?: boolean } = {},
+  ): Promise<void> {
     const turn = this.#queue.then(() => this.#runTurn(bodyId, text, meta));
     this.#queue = turn;
     return turn;
   }
 
-  async #runTurn(bodyId: string, text: string, meta: { sttMs?: number }): Promise<void> {
+  async #runTurn(
+    bodyId: string,
+    text: string,
+    meta: { sttMs?: number; proactive?: boolean },
+  ): Promise<void> {
     const { llm, systemPrompt, traces, log } = this.#deps;
     const turnId = randomUUID();
     const started = performance.now();
@@ -141,7 +165,9 @@ export class Orchestrator {
       actions: [],
       stopReason: null,
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      skills: [],
       ...(meta.sttMs === undefined ? {} : { sttMs: meta.sttMs }),
+      ...(meta.proactive ? { proactive: true } : {}),
     };
 
     const body = this.#deps.registry.get(bodyId);
@@ -177,7 +203,9 @@ export class Orchestrator {
       current.spoken += text;
     };
     say("state.set", { mode: "thinking" });
-    const { note: memoryNote, fresh } = await this.#recall(text);
+    const { note: memoryNote, fresh } = meta.proactive
+      ? { note: "", fresh: false }
+      : await this.#recall(text);
     if (fresh && this.#history.length) {
       // A new conversation after a long gap: start the working context over. What
       // mattered lives on in her memories and last conversation's summary.
@@ -201,7 +229,12 @@ export class Orchestrator {
         firstDeltaOfCall = true;
         partial = "";
         const message = await llm.stream(
-          { system: systemPrompt, tools, messages: this.#history, signal: current.abort.signal },
+          {
+            system: systemPrompt,
+            tools: this.tools,
+            messages: this.#history,
+            signal: current.abort.signal,
+          },
           (delta) => {
             if (current.abort.signal.aborted) return;
             partial += delta;
@@ -231,9 +264,12 @@ export class Orchestrator {
         this.#history.push({ role: "assistant", content: message.content });
         if (toolUses.length === 0) break;
 
-        const results = toolUses.map((tool) => this.#runTool(tool, bodyId, trace));
+        const results = await Promise.all(
+          toolUses.map((tool) => this.#runTool(tool, bodyId, trace)),
+        );
         this.#history.push({ role: "user", content: results });
       }
+      if (!meta.proactive) await this.#backstop(text, current.spoken, bodyId, trace);
     } catch (error) {
       if (current.abort.signal.aborted) {
         // Interrupted: keep what was said, cut off, so she knows where she stopped.
@@ -290,13 +326,13 @@ export class Orchestrator {
       traces.add(trace);
       log.info({ trace }, "turn completed");
       const reply = current.spoken.trim();
-      if (this.#deps.memory && (reply || trace.interrupted)) {
+      if (this.#deps.memory && !meta.proactive && (reply || trace.interrupted)) {
         void this.#deps.memory.remember({ bodyId, userText: text, replyText: reply, trace });
       }
     }
   }
 
-  #runTool(tool: ToolUse, bodyId: string, trace: TurnTrace): ToolResult {
+  async #runTool(tool: ToolUse, bodyId: string, trace: TurnTrace): Promise<ToolResult> {
     const result = (content: string, isError = false): ToolResult => ({
       type: "tool_result",
       tool_use_id: tool.id,
@@ -304,8 +340,19 @@ export class Orchestrator {
       ...(isError ? { is_error: true } : {}),
     });
 
+    const skills = this.#deps.skills;
+    if (tool.name !== SET_EXPRESSION && skills?.has(tool.name)) {
+      const outcome = await skills.run(tool.name, tool.input, {
+        bodyId,
+        now: (this.#deps.now ?? (() => new Date()))(),
+        timezone: this.#deps.timezone,
+        log: this.#deps.log,
+      });
+      trace.skills.push(`${tool.name}:${outcome.ok ? "ok" : "error"}`);
+      return outcome.ok ? result(JSON.stringify(outcome.result)) : result(outcome.error, true);
+    }
     if (tool.name !== SET_EXPRESSION) {
-      return result(`Unknown tool "${tool.name}". The only tool is ${SET_EXPRESSION}.`, true);
+      return result(`Unknown tool "${tool.name}".`, true);
     }
     const parsed = SetExpressionInput.safeParse(tool.input);
     if (!parsed.success) return result(z.prettifyError(parsed.error), true);
@@ -325,6 +372,31 @@ export class Orchestrator {
     );
     trace.expressions.push(`${affect}:${intensity}`);
     return result("shown");
+  }
+
+  /** She said she set it but no tool ran: make it true (see skills/builtin/backstop.ts). */
+  async #backstop(userText: string, said: string, bodyId: string, trace: TurnTrace): Promise<void> {
+    const skills = this.#deps.skills;
+    if (!skills || !/\b(timer|remind)/i.test(said)) return;
+    const intent = backstop(userText);
+    if (
+      !intent ||
+      trace.skills.some((s) => s.startsWith(intent.tool)) ||
+      !skills.has(intent.tool)
+    ) {
+      return;
+    }
+    const outcome = await skills.run(intent.tool, intent.input, {
+      bodyId,
+      now: (this.#deps.now ?? (() => new Date()))(),
+      timezone: this.#deps.timezone,
+      log: this.#deps.log,
+    });
+    trace.skills.push(`${intent.tool}:backstop:${outcome.ok ? "ok" : "error"}`);
+    this.#deps.log.info(
+      { intent, ok: outcome.ok },
+      "she said it but didn't call the tool; did it for her",
+    );
   }
 
   async #recall(text: string): Promise<{ note: string; fresh: boolean }> {

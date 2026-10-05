@@ -10,13 +10,19 @@ import { ClaudeLLM, type LLM } from "./modules/llm/llm.js";
 import { OllamaLLM } from "./modules/llm/ollama.js";
 import { Orchestrator } from "./modules/orchestrator/orchestrator.js";
 import { MOOD_TAG_INSTRUCTIONS } from "./modules/orchestrator/tags.js";
-import { tools } from "./modules/orchestrator/tools.js";
 import { migrate, openDb } from "./modules/memory/db.js";
 import { LocalEmbedder, OllamaEmbedder } from "./modules/memory/embedder.js";
 import { ClaudeExtractor, OllamaExtractor } from "./modules/memory/extractor.js";
 import { MemoryService } from "./modules/memory/memory.js";
 import { registerMemoryRoutes } from "./modules/memory/routes.js";
 import { MemoryStore } from "./modules/memory/store.js";
+import { Announcer } from "./modules/skills/announcer.js";
+import { timerSkills } from "./modules/skills/builtin/timers.js";
+import { weatherSkill } from "./modules/skills/builtin/weather.js";
+import { PolicyGate } from "./modules/skills/policy.js";
+import { SkillRegistry } from "./modules/skills/registry.js";
+import { DbScheduleStore, InMemoryScheduleStore, Schedules } from "./modules/skills/schedule.js";
+import type { Db } from "./modules/memory/db.js";
 import { Hearing } from "./modules/voice/hearing.js";
 import { LocalSTT, type STT } from "./modules/voice/stt.js";
 import { KokoroTTS, type TTS } from "./modules/voice/tts.js";
@@ -94,16 +100,31 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
       (err) => app.log.warn({ err }, "couldn't load her voice; bodies will use their own"),
     );
   }
-  if (llm instanceof OllamaLLM) {
-    llm.warm({ system: systemPrompt, tools }).then(
-      () => app.log.info(`${config.ollama.model} is loaded and ready`),
-      (err) => app.log.warn({ err }, "couldn't preload the Ollama model"),
-    );
-  }
-
-  const memory = options.memory ?? (await createMemory(config, app));
+  const created = options.memory ? undefined : await createMemory(config, app);
+  const memory = options.memory ?? created?.memory;
   const resumed = memory ? await memory.start() : [];
   if (memory) registerMemoryRoutes(app, memory);
+
+  // Skills (§12): timers and reminders on her own clock, and the weather.
+  // The orchestrator exists by the time anything fires.
+  const announcer = new Announcer({
+    registry,
+    send,
+    speak: (bodyId, event) => void orchestrator.enqueueEvent(bodyId, event),
+    timezone: config.timezone,
+    log: app.log,
+  });
+  const schedules = new Schedules({
+    store: created?.db ? new DbScheduleStore(created.db) : new InMemoryScheduleStore(),
+    onFire: (item, lateMs) => announcer.fire(item, lateMs),
+    onChange: (items) => announcer.show(items),
+    onError: (err) => app.log.warn({ err }, "timer check failed"),
+  });
+  const skills = new SkillRegistry(
+    new PolicyGate({ granted: config.skills.grant, denied: config.skills.deny, log: app.log }),
+  );
+  for (const skill of timerSkills(schedules)) skills.register(skill);
+  skills.register(weatherSkill({ defaultPlace: config.skills.weatherPlace }));
 
   const orchestrator = new Orchestrator({
     llm,
@@ -112,11 +133,21 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
     traces,
     systemPrompt,
     tts,
+    skills,
     ...(memory ? { memory } : {}),
     timezone: config.timezone,
     log: app.log,
   });
   orchestrator.attach(bus);
+  announcer.attach(bus);
+  await schedules.start();
+  app.addHook("onClose", async () => schedules.stop());
+  if (llm instanceof OllamaLLM) {
+    llm.warm({ system: systemPrompt, tools: orchestrator.tools }).then(
+      () => app.log.info(`${config.ollama.model} is loaded and ready`),
+      (err) => app.log.warn({ err }, "couldn't preload the Ollama model"),
+    );
+  }
   if (resumed.length) {
     orchestrator.preload(resumed);
     app.log.info({ turns: resumed.length }, "continuing the conversation from before the restart");
@@ -131,7 +162,7 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
     }).attach(bus);
   }
 
-  return { app, registry, bus, orchestrator, traces };
+  return { app, registry, bus, orchestrator, traces, schedules };
 }
 
 function createLLM(config: Config): LLM {
@@ -152,7 +183,7 @@ function createSTT(config: Config): STT | undefined {
 async function createMemory(
   config: Config,
   app: { log: FastifyBaseLogger; addHook: FastifyInstance["addHook"] },
-): Promise<MemoryService | undefined> {
+): Promise<{ memory: MemoryService; db: Db } | undefined> {
   const m = config.memory;
   if (m.db === "off") return undefined;
   const db = await openDb(m.db);
@@ -173,6 +204,7 @@ async function createMemory(
     timezone: config.timezone,
     log: app.log,
     gapMinutes: m.gapMinutes,
+    learnDelayMs: m.learnDelayMs,
   });
   app.addHook("onClose", async () => {
     // Let in-flight memory writes land, but don't hang shutdown on a slow model.
@@ -183,5 +215,5 @@ async function createMemory(
     { db: m.db.replace(/:[^:@/]+@/, ":***@"), extractor: m.model, embedder: embedder.model },
     "memory is on",
   );
-  return memory;
+  return { memory, db };
 }

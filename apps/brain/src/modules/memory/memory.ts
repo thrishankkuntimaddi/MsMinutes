@@ -12,6 +12,11 @@ export type MemoryDeps = {
   log: FastifyBaseLogger;
   /** A gap longer than this starts a new conversation. */
   gapMinutes?: number;
+  /**
+   * Learning (extraction, summaries) waits until the conversation has been quiet this long.
+   * With a local model it would otherwise queue in front of her next reply.
+   */
+  learnDelayMs?: number;
   now?: () => Date;
 };
 
@@ -42,6 +47,9 @@ export class MemoryService {
   #conversation: Conversation | null = null;
   #turnsInConversation = 0;
   #queue: Promise<void> = Promise.resolve();
+  /** Model work waiting for a quiet moment. */
+  #later: (() => Promise<void>)[] = [];
+  #laterTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(deps: MemoryDeps) {
     this.#deps = deps;
@@ -87,6 +95,7 @@ export class MemoryService {
    * new conversation began (after a long gap): her working context should start over.
    */
   async recall(text: string): Promise<{ note: string; fresh: boolean }> {
+    this.#postpone();
     const { store, embedder, log } = this.#deps;
     const started = !this.#conversation || this.#isStale(this.#conversation);
     if (started) await this.#newConversation();
@@ -122,15 +131,53 @@ export class MemoryService {
   }
 
   /** Stores the exchange and, in the background, learns from it. */
-  remember(turn: TurnRecord): Promise<void> {
-    const job = this.#queue.then(() => this.#learn(turn));
-    this.#queue = job.catch((err) => this.#deps.log.warn({ err }, "memory write failed"));
-    return this.#queue;
+  /** Resolves when the turn is stored and anything it queued right away has run. */
+  async remember(turn: TurnRecord): Promise<void> {
+    this.#run(() => this.#learn(turn));
+    await this.#settle();
   }
 
-  /** Resolves once queued memory work is done (shutdown, tests). */
-  idle(): Promise<void> {
-    return this.#queue;
+  /** Runs everything waiting, now, and resolves when memory work is done (shutdown, tests). */
+  async idle(): Promise<void> {
+    clearTimeout(this.#laterTimer);
+    this.#flush();
+    await this.#settle();
+  }
+
+  /** Jobs can queue more jobs; wait until the queue stops growing. */
+  async #settle(): Promise<void> {
+    let seen: Promise<void>;
+    do {
+      seen = this.#queue;
+      await seen;
+    } while (seen !== this.#queue);
+  }
+
+  #run(job: () => Promise<void>): void {
+    this.#queue = this.#queue
+      .then(job)
+      .catch((err) => this.#deps.log.warn({ err }, "memory write failed"));
+  }
+
+  /** Model work: now, or once things have been quiet for `learnDelayMs`. */
+  #defer(job: () => Promise<void>): void {
+    if (!this.#deps.learnDelayMs) return this.#run(job);
+    this.#later.push(job);
+    this.#postpone();
+  }
+
+  /** Someone's talking: push waiting model work back. */
+  #postpone(): void {
+    if (!this.#later.length) return;
+    clearTimeout(this.#laterTimer);
+    this.#laterTimer = setTimeout(() => this.#flush(), this.#deps.learnDelayMs);
+    this.#laterTimer.unref?.();
+  }
+
+  #flush(): void {
+    const jobs = this.#later;
+    this.#later = [];
+    for (const job of jobs) this.#run(job);
   }
 
   // ---------- user control (§11.2: viewable, editable, deletable) ----------
@@ -173,7 +220,7 @@ export class MemoryService {
   // ---------- internals ----------
 
   async #learn(turn: TurnRecord): Promise<void> {
-    const { store, embedder, extractor, log, userName } = this.#deps;
+    const { store } = this.#deps;
     if (!this.#conversation || this.#isStale(this.#conversation)) await this.#newConversation();
     const conversation = this.#conversation!;
     const at = this.#now;
@@ -181,8 +228,11 @@ export class MemoryService {
     this.#conversation = { ...conversation, lastTurnAt: at.toISOString() };
     this.#turnsInConversation++;
 
-    if (!worthLearning(turn.userText)) return;
+    if (worthLearning(turn.userText)) this.#defer(() => this.#extract(turn, turnId));
+  }
 
+  async #extract(turn: TurnRecord, turnId: string): Promise<void> {
+    const { store, embedder, extractor, log, userName } = this.#deps;
     const [about] = await embedder.embed([`${turn.userText}\n${turn.replyText}`], "query");
     const known = (await store.search(about!, embedder.model, 8)).filter((m) => m.similarity > 0.2);
     const change = await extractor.extract({
@@ -244,11 +294,7 @@ export class MemoryService {
     this.#turnsInConversation = 0;
     // Summarize the ones that ended, in the background, for "last time we talked".
     const ended = await store.unsummarized(this.#conversation.id);
-    for (const c of ended) {
-      this.#queue = this.#queue
-        .then(() => this.#summarize(c))
-        .catch((err) => this.#deps.log.warn({ err }, "conversation summary failed"));
-    }
+    for (const c of ended) this.#defer(() => this.#summarize(c));
   }
 
   async #summarize(c: Conversation): Promise<void> {

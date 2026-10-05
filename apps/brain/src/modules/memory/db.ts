@@ -93,6 +93,25 @@ const MIGRATIONS: { id: number; sql: string }[] = [
       create index memories_by_user on memories (user_id);
     `,
   },
+  {
+    id: 2,
+    sql: `
+      -- Timers and reminders (ARCHITECTURE §11.3 "reminders"), so they survive a restart.
+      create table scheduled (
+        id uuid primary key default gen_random_uuid(),
+        user_id text not null references users(id),
+        kind text not null,
+        label text not null,
+        due_at timestamptz not null,
+        duration_sec integer,
+        body_id text not null,
+        status text not null default 'pending',
+        created_at timestamptz not null default now(),
+        finished_at timestamptz
+      );
+      create index scheduled_pending on scheduled (user_id, status, due_at);
+    `,
+  },
 ];
 
 export async function migrate(db: Db): Promise<void> {

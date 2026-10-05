@@ -13,6 +13,10 @@ export type TurnTrace = {
   firstAudioMs?: number | null;
   /** Speech recognition time, when the turn came from her hearing you. */
   sttMs?: number;
+  /** Skill calls this turn, e.g. "timer_start:ok". */
+  skills: string[];
+  /** She spoke up on her own (a timer, a reminder), not in reply. */
+  proactive?: boolean;
   /** The user talked over her and the turn was cut short. */
   interrupted?: boolean;
   stopReason: string | null;

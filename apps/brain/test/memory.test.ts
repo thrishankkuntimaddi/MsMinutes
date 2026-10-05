@@ -216,6 +216,33 @@ describe("memory service", () => {
     expect((await fresh.recall("hey")).note).toContain("Last time you talked");
   });
 
+  it("waits for a quiet moment before learning, when told to", async () => {
+    const extractor = new ScriptedExtractor();
+    const memory = new MemoryService({
+      store,
+      embedder,
+      extractor,
+      userName: "Thrishank",
+      timezone: "UTC",
+      log,
+      learnDelayMs: 80,
+    });
+    await memory.start();
+    await memory.recall("x");
+    await memory.remember({
+      bodyId: "web-01",
+      userText: "I'm learning the violin these days",
+      replyText: "Lovely.",
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    await memory.recall("are you there?"); // someone's talking: push it back
+    await new Promise((r) => setTimeout(r, 50));
+    expect(extractor.inputs).toHaveLength(0);
+    await new Promise((r) => setTimeout(r, 120));
+    await memory.idle();
+    expect(extractor.inputs).toHaveLength(1);
+  });
+
   it("resumes a conversation in progress after a restart", async () => {
     const memory = service(new ScriptedExtractor());
     await memory.start();

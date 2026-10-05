@@ -20,8 +20,12 @@ const Env = z.object({
   STT_PROVIDER: z.enum(["none", "local"]).default("none"),
   STT_MODEL: z.string().min(1).default("onnx-community/moonshine-base-ONNX"),
   MEMORY_DB: z.string().default("off"),
+  WEATHER_PLACE: z.string().min(1).optional(),
+  SKILLS_GRANT: z.string().default(""),
+  SKILLS_DENY: z.string().default(""),
   MEMORY_MODEL: z.string().min(1).optional(),
   MEMORY_GAP_MINUTES: z.coerce.number().min(0).default(30),
+  MEMORY_LEARN_DELAY_SECONDS: z.coerce.number().min(0).optional(),
   EMBED_PROVIDER: z.enum(["ollama", "local"]).optional(),
   EMBED_MODEL: z.string().min(1).optional(),
 });
@@ -50,10 +54,14 @@ export type Config = {
    * The extraction model defaults to Claude Haiku 4.5 (or the Ollama model when local);
    * embeddings to nomic-embed-text via Ollama when it's the provider, else a local model.
    */
+  /** Skills (§12) and the policy gate's grants (§13.2). */
+  skills: { weatherPlace: string | undefined; grant: string[]; deny: string[] };
   memory: {
     db: string;
     /** A pause longer than this starts a new conversation. */
     gapMinutes: number;
+    /** Quiet time before learning from what was said (0 = right away). */
+    learnDelayMs: number;
     model: string;
     embed: { provider: "ollama" | "local"; model: string };
   };
@@ -81,6 +89,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     tts: { provider: e.TTS_PROVIDER, voice: e.TTS_VOICE, speed: e.TTS_SPEED },
     stt: { provider: e.STT_PROVIDER, model: e.STT_MODEL },
     memory: memoryConfig(e),
+    skills: {
+      weatherPlace: e.WEATHER_PLACE,
+      grant: list(e.SKILLS_GRANT),
+      deny: list(e.SKILLS_DENY),
+    },
   };
 }
 
@@ -90,6 +103,8 @@ function memoryConfig(e: z.infer<typeof Env>): Config["memory"] {
   return {
     db: e.MEMORY_DB.trim() || "off",
     gapMinutes: e.MEMORY_GAP_MINUTES,
+    // A local model does one thing at a time: learn once the conversation pauses.
+    learnDelayMs: (e.MEMORY_LEARN_DELAY_SECONDS ?? (local ? 20 : 0)) * 1000,
     model: e.MEMORY_MODEL ?? (local ? e.OLLAMA_MODEL : "claude-haiku-4-5"),
     embed: {
       provider,
@@ -98,3 +113,9 @@ function memoryConfig(e: z.infer<typeof Env>): Config["memory"] {
     },
   };
 }
+
+const list = (s: string) =>
+  s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
