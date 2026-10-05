@@ -52,6 +52,26 @@ describe("spring", () => {
   });
 });
 
+describe("spring stability", () => {
+  it("stays bounded for her stiffest spring even at 30 fps or slower", () => {
+    const s = new Spring(0, 900, 0.78);
+    for (let i = 0; i < 600; i++) {
+      s.target = i % 20 < 10 ? 1 : 0;
+      s.step(1 / 30);
+      expect(Math.abs(s.value)).toBeLessThan(2);
+    }
+  });
+
+  it("keeps the mouth in range when frames come slowly", () => {
+    const rig = new CharacterRig({ random: seeded() });
+    for (let i = 0; i < 300; i++) {
+      rig.setViseme(i % 6 < 3 ? VISEMES.wide : VISEMES.closed);
+      const f = rig.update(1 / 20);
+      expect(f.mouthOpen).toBeLessThan(1.5);
+    }
+  });
+});
+
 describe("rig", () => {
   it("produces finite values for every expression", () => {
     for (const affect of Affect.options) {
