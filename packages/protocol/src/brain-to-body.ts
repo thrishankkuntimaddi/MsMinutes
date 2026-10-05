@@ -15,6 +15,11 @@ export const Welcome = defineMessage(
     permissions: z.array(CapabilityName),
     /** Body must send a heartbeat (or any message) at least this often. */
     heartbeatIntervalMs: z.number().int().positive(),
+    /**
+     * True when the brain will stream her voice as `speech.audio.chunk`. The body then plays
+     * that audio instead of synthesizing speech itself. Absent means false.
+     */
+    audio: z.boolean().optional(),
   }),
 );
 
@@ -44,10 +49,12 @@ export const SpeechAudioChunk = defineMessage(
   z.object({ turnId: TurnId, ...AudioChunkFields }),
 );
 
+/** Timing for the audio chunk that follows it with the same `seq`; `t` is ms from that chunk's start. */
 export const SpeechMarks = defineMessage(
   "speech.marks",
   z.object({
     turnId: TurnId,
+    seq: z.number().int().nonnegative().optional(),
     marks: z.array(
       z.object({
         t: z.number().nonnegative(),

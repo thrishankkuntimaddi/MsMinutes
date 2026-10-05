@@ -14,6 +14,9 @@ export const Affect = z.enum([
   "concerned",
   "laughing",
   "thinking",
+  "playful",
+  "shy",
+  "proud",
 ]);
 export type Affect = z.infer<typeof Affect>;
 

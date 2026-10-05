@@ -63,6 +63,9 @@
               "type": "integer",
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991
+            },
+            "audio": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -191,7 +194,10 @@
                 "excited",
                 "concerned",
                 "laughing",
-                "thinking"
+                "thinking",
+                "playful",
+                "shy",
+                "proud"
               ]
             },
             "intensity": {
@@ -224,7 +230,10 @@
                       "excited",
                       "concerned",
                       "laughing",
-                      "thinking"
+                      "thinking",
+                      "playful",
+                      "shy",
+                      "proud"
                     ]
                   },
                   "weight": {
@@ -436,6 +445,11 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 64
+            },
+            "seq": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "marks": {
               "type": "array",
