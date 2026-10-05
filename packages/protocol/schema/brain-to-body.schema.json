@@ -66,6 +66,9 @@
             },
             "audio": {
               "type": "boolean"
+            },
+            "hearing": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -593,6 +596,60 @@
           },
           "required": [
             "turnId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "v",
+        "id",
+        "bodyId",
+        "ts",
+        "type",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "bodyId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        "ts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "replyTo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "type": "string",
+          "const": "transcript"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "text"
           ],
           "additionalProperties": false
         }

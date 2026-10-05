@@ -20,6 +20,11 @@ export const Welcome = defineMessage(
      * that audio instead of synthesizing speech itself. Absent means false.
      */
     audio: z.boolean().optional(),
+    /**
+     * True when the brain transcribes this body's `event.audio.*` itself (it declared `listen`).
+     * Otherwise the body must send typed or locally-transcribed text. Absent means false.
+     */
+    hearing: z.boolean().optional(),
   }),
 );
 
@@ -64,6 +69,12 @@ export const SpeechMarks = defineMessage(
     ),
   }),
 );
+
+/**
+ * What the brain heard in the body's last `event.audio.*` utterance. Empty text means it
+ * heard nothing worth answering (silence, noise, or her own voice echoing back).
+ */
+export const Transcript = defineMessage("transcript", z.object({ text: z.string().max(4000) }));
 
 export const SpeechEnd = defineMessage("speech.end", z.object({ turnId: TurnId }));
 
@@ -111,6 +122,7 @@ export const BrainToBodyMessage = z.discriminatedUnion("type", [
   SpeechMarks,
   SpeechEnd,
   SpeechCancel,
+  Transcript,
   CapabilityCall,
   ErrorMessage,
 ]);
