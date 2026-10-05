@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@ms-minutes/character": "workspace:^",
-    "@ms-minutes/protocol": "workspace:^"
+    "@ms-minutes/protocol": "workspace:^",
+    "@ricky0123/vad-web": "^0.0.31"
   },
   "devDependencies": {
     "vite": "^8.3.2"

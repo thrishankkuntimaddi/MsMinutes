@@ -1,5 +1,6 @@
 import { ACTIONS } from "@ms-minutes/character";
 import {
+  CloseCode,
   bodyMessage,
   decodeBrainMessage,
   encode,
@@ -7,7 +8,8 @@ import {
   type BrainToBodyMessage,
 } from "@ms-minutes/protocol";
 
-export type LinkStatus = "connecting" | "online" | "offline";
+/** "replaced": she's open in another tab, which now has her; this one stops reconnecting. */
+export type LinkStatus = "connecting" | "online" | "offline" | "replaced";
 
 export type BrainLinkOptions = {
   url: string;
@@ -84,10 +86,12 @@ export class BrainLink {
       this.#options.onMessage(message);
     };
 
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       clearInterval(this.#heartbeat);
       this.#online = false;
       this.#socket = null;
+      // Another tab took over this body. Reconnecting would just take it back, forever.
+      if (event.code === CloseCode.Replaced) return onStatus("replaced");
       onStatus("offline");
       const delay = RETRY_MS[Math.min(this.#attempt++, RETRY_MS.length - 1)];
       setTimeout(() => this.connect(), delay);
@@ -106,6 +110,22 @@ export class BrainLink {
         ...(error ? { error: { code: "unsupported", message: error } } : {}),
       }),
     );
+  }
+
+  /** One utterance from the mic: PCM16 chunks, then the end marker. */
+  utterance(chunks: string[], sampleRate = 16_000): boolean {
+    if (!this.#online) return false;
+    chunks.forEach((data, seq) =>
+      this.#send(
+        bodyMessage("event.audio.chunk", this.#options.bodyId, {
+          seq,
+          codec: "pcm16",
+          sampleRate,
+          data,
+        }),
+      ),
+    );
+    return this.#send(bodyMessage("event.audio.end", this.#options.bodyId, {}));
   }
 
   interrupt(): void {

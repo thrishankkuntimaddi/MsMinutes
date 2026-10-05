@@ -9,7 +9,7 @@ const H = 360;
 const FLOOR = 300;
 const BASE_SCALE = 0.7;
 /** Stage pixels from the middle to where x = ±1 puts her. */
-const RANGE = 140;
+const RANGE = 112;
 
 const R = 100;
 const COIN = 24; // thickness of her case

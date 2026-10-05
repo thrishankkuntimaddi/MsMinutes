@@ -1,6 +1,7 @@
 import { CharacterRig, isAction } from "@ms-minutes/character";
 import type { Affect } from "@ms-minutes/protocol";
 import { AudioVoice } from "./audio-voice.js";
+import { Ears, toPcm16Chunks } from "./ears.js";
 import type { BodyMode, BrainToBodyMessage } from "@ms-minutes/protocol";
 import { BrainLink, type LinkStatus } from "./brain.js";
 import { Fx } from "./fx.js";
@@ -78,7 +79,9 @@ const voice = new VoiceQueue(speaker, {
     else {
       rig.lookAt(0, 0, 0.1);
       spans.forEach((s) => s.classList.add("on"));
+      fadeCaptionSoon();
     }
+    ears.setSheIsTalking(busy);
     updateMode();
   },
 });
@@ -105,7 +108,9 @@ function startAudio(): void {
       else {
         rig.lookAt(0, 0, 0.1);
         spans.forEach((s) => s.classList.add("on"));
+        fadeCaptionSoon();
       }
+      ears.setSheIsTalking(busy);
       updateMode();
     },
   });
@@ -113,7 +118,17 @@ function startAudio(): void {
 
 const talking = () => voice.busy || (audio?.busy ?? false);
 
+let captionTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Captions fade a few seconds after she stops, so they don't sit over her feet. */
+function fadeCaptionSoon(): void {
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => caption.classList.add("fade"), 3500);
+}
+
 function setCaption(text: string): HTMLSpanElement[] {
+  clearTimeout(captionTimer);
+  caption.classList.remove("fade");
   caption.replaceChildren();
   const words: HTMLSpanElement[] = [];
   for (const part of text.split(/(\s+)/)) {
@@ -174,7 +189,27 @@ function onMessage(message: BrainToBodyMessage): void {
     }
     case "welcome":
       brainSpeaks = message.payload.audio ?? false;
+      brainHears = message.payload.hearing ?? false;
+      mic.title = brainHears ? "Hands-free: click to start or stop listening" : "Click to talk";
       break;
+    case "transcript": {
+      const text = message.payload.text;
+      heard.textContent = text;
+      heard.classList.toggle("missed", !text);
+      if (!text) {
+        heard.textContent = "(didn't catch that)";
+        setTimeout(
+          () => heard.textContent === "(didn't catch that)" && (heard.textContent = ""),
+          1800,
+        );
+      } else {
+        // The brain starts a turn for it; count it so interrupts can skip it later.
+        inFlight++;
+        rig.setExpression("curious", 0.4);
+      }
+      updateMode();
+      break;
+    }
     case "expression.set":
       if (turnIgnored) break;
       express(message.payload.affect, message.payload.intensity);
@@ -242,13 +277,14 @@ function express(affect: Affect, intensity: number): void {
 
 /** One face, one mode: what she's doing locally wins over what the brain last said. */
 function updateMode(): void {
-  const mode: BodyMode = listener.listening
-    ? "listening"
-    : talking()
-      ? "speaking"
-      : brainMode === "thinking"
-        ? "thinking"
-        : "idle";
+  const mode: BodyMode =
+    listener.listening || hearingYou
+      ? "listening"
+      : talking()
+        ? "speaking"
+        : brainMode === "thinking"
+          ? "thinking"
+          : "idle";
   rig.setMode(mode);
   $("led").classList.toggle("on", mode !== "idle" || link.online);
 }
@@ -256,7 +292,13 @@ function updateMode(): void {
 function showLink(state: LinkStatus): void {
   if (state === "online") status("Connected · her brain is listening", "online");
   else if (state === "connecting") status("Connecting to her brain…");
-  else status("Brain offline · start it with  pnpm dev:brain", "offline");
+  else if (state === "replaced") {
+    status("She's open in another tab · click here to bring her back", "offline");
+    $("status").onclick = () => {
+      $("status").onclick = null;
+      link.connect();
+    };
+  } else status("Brain offline · start it with  pnpm dev:brain", "offline");
 }
 
 function status(text: string, kind?: "online" | "offline"): void {
@@ -302,6 +344,66 @@ $<HTMLFormElement>("dock").addEventListener("submit", (e) => {
   send(input.value);
 });
 
+/** The brain transcribes our microphone itself, so we can listen hands-free. */
+let brainHears = false;
+/** You're talking right now (hands-free). */
+let hearingYou = false;
+
+const ears = new Ears({
+  onMaybeSpeech: () => {
+    hearingYou = true;
+    rig.lookAt(0, 0.05, 30);
+    updateMode();
+  },
+  onSpeech: () => {
+    // Barge-in: you started talking over her (or while she was thinking).
+    if (talking() || brainMode !== "idle") interrupt();
+  },
+  onUtterance: (samples) => {
+    hearingYou = false;
+    if (link.utterance(toPcm16Chunks(samples))) {
+      heard.textContent = "…";
+    } else {
+      rig.setExpression("concerned", 0.5);
+      status("Brain offline · I can't hear you until it's back", "offline");
+    }
+    updateMode();
+  },
+  onMisfire: () => {
+    hearingYou = false;
+    updateMode();
+  },
+});
+
+/** Hands-free on/off when the brain can hear; otherwise the browser's recognition. */
+async function toggleMic(): Promise<void> {
+  if (!brainHears) return listen();
+  try {
+    if (ears.on) {
+      await ears.stop();
+      hearingYou = false;
+      status("Microphone off · type, or click the mic", link.online ? "online" : undefined);
+    } else {
+      await ears.start();
+      status("Listening · just talk to her", "online");
+    }
+  } catch (error) {
+    status(micError(error), "offline");
+  }
+  mic.classList.toggle("live", ears.on);
+  input.placeholder = ears.on ? "Just talk, or type here…" : "Say something to Miss Minutes…";
+  updateMode();
+}
+
+function micError(error: unknown): string {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError")
+    return "Microphone blocked. Allow it in the address bar and try again.";
+  if (name === "NotFoundError") return "No microphone found.";
+  return `Microphone failed: ${error instanceof Error ? error.message : String(error)}`;
+}
+
+/** Click-to-talk with the browser's own speech recognition (when the brain can't hear). */
 async function listen(): Promise<void> {
   if (!listener.supported) {
     status("This browser can't hear you; type instead (Chrome, Edge or Safari can).", "offline");
@@ -329,21 +431,7 @@ async function listen(): Promise<void> {
   }
 }
 
-mic.addEventListener("click", () => void listen());
-
-// Hold Space to talk (when you're not typing).
-let spaceHeld = false;
-addEventListener("keydown", (e) => {
-  if (e.code !== "Space" || e.repeat || e.target === input || $("console").hidden) return;
-  e.preventDefault();
-  spaceHeld = true;
-  void listen();
-});
-addEventListener("keyup", (e) => {
-  if (e.code !== "Space" || !spaceHeld) return;
-  spaceHeld = false;
-  listener.stop();
-});
+mic.addEventListener("click", () => void toggleMic());
 
 // ---------- Screen static ----------
 
