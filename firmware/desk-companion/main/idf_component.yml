@@ -1,0 +1,5 @@
+# Managed components from the ESP Component Registry (fetched by idf.py on first build).
+dependencies:
+  idf: ">=5.3"
+  espressif/esp_lcd_gc9a01: "^2.0.0"
+  espressif/esp_websocket_client: "^1.2.0"

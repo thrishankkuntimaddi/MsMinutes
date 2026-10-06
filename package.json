@@ -20,7 +20,9 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/web-body/tsconfig.json && eslint . && prettier --check . && vitest run"
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/web-body/tsconfig.json && eslint . && prettier --check . && vitest run",
+    "firmware:presets": "tsx packages/character/scripts/generate-firmware-presets.ts",
+    "firmware:check": "make -C firmware/desk-companion/host check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

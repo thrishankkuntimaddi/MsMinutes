@@ -1,0 +1,81 @@
+{
+  "hello": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000001",
+    "type": "hello",
+    "bodyId": "desk-01",
+    "ts": 1759640400000,
+    "payload": {
+      "bodyType": "desk_companion",
+      "firmware": "0.1.0",
+      "capabilities": [
+        { "name": "speak.audio", "description": "Play her voice", "riskTier": 0 },
+        { "name": "listen", "description": "Push-to-talk microphone", "riskTier": 2 },
+        { "name": "express", "description": "Show an emotion on her face", "riskTier": 0 },
+        { "name": "display.timer", "description": "Show running timers", "riskTier": 0 },
+        { "name": "alarm.ring", "description": "Ring when a timer fires", "riskTier": 0 }
+      ]
+    }
+  },
+  "heartbeat": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000002",
+    "type": "heartbeat",
+    "bodyId": "desk-01",
+    "ts": 1759640415000,
+    "payload": {}
+  },
+  "event.utterance.text": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000003",
+    "type": "event.utterance.text",
+    "bodyId": "desk-01",
+    "ts": 1759640420000,
+    "payload": { "text": "Set a timer for four minutes, please." }
+  },
+  "event.audio.chunk": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000004",
+    "type": "event.audio.chunk",
+    "bodyId": "desk-01",
+    "ts": 1759640421000,
+    "payload": { "seq": 0, "codec": "pcm16", "sampleRate": 16000, "data": "AAAAAAAAAAA=" }
+  },
+  "event.audio.end": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000005",
+    "type": "event.audio.end",
+    "bodyId": "desk-01",
+    "ts": 1759640422000,
+    "payload": {}
+  },
+  "event.interrupt": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000006",
+    "type": "event.interrupt",
+    "bodyId": "desk-01",
+    "ts": 1759640423000,
+    "payload": {}
+  },
+  "event.sensor": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000007",
+    "type": "event.sensor",
+    "bodyId": "desk-01",
+    "ts": 1759640424000,
+    "payload": { "kind": "battery", "data": { "volts": 3.92, "percent": 71, "charging": false } }
+  },
+  "capability.result": {
+    "v": 1,
+    "id": "b1a7c2e0-0001-4000-8000-000000000008",
+    "type": "capability.result",
+    "bodyId": "desk-01",
+    "ts": 1759640425000,
+    "replyTo": "a9f0e1d2-0002-4000-8000-000000000009",
+    "payload": {
+      "callId": "a9f0e1d2-0002-4000-8000-000000000009",
+      "ok": false,
+      "error": { "code": "unsupported", "message": "can't animate dance" }
+    }
+  }
+}

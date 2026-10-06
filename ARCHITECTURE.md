@@ -3,11 +3,11 @@
 > **One Brain. Many Bodies.**
 > A persistent AI identity that talks naturally with a human and inhabits many digital and physical bodies — starting with a tiny retro clock on the desk.
 
-|              |                        |
-| ------------ | ---------------------- |
-| Status       | v0.6 (Phases 1–6 done) |
-| Last updated | 2026-10-05             |
-| Owner        | Thrishank              |
+|              |                                                                     |
+| ------------ | ------------------------------------------------------------------- |
+| Status       | v0.7 (Phases 1–6 done; Phase 7 firmware written, awaiting hardware) |
+| Last updated | 2026-10-05                                                          |
+| Owner        | Thrishank                                                           |
 
 ---
 
@@ -392,7 +392,7 @@ Layer 1  Idle      blinks, eye saccades, breathing, clock ticking
 
 - `packages/character` is pure, renderer-agnostic logic + JSON presets.
 - Web renderer: Canvas 2D at **240×240** (matches round GC9A01-class displays).
-- ESP32 renderer: LVGL / direct framebuffer; rig logic ported to C++ (small, data-driven).
+- ESP32 renderer: direct framebuffer with a small anti-aliased rasterizer; rig logic ported to C, presets generated from this package (ADR-0013).
 
 ---
 
@@ -577,7 +577,7 @@ ms-minutes/
 │  ├─ character/          # rig, presets, blending (renderer-agnostic)
 │  └─ persona/            # system prompt, personality spec, voice config
 ├─ firmware/
-│  └─ desk-companion/    # ESP32-S3 (ESP-IDF + LVGL), hardware track H1–H4
+│  └─ desk-companion/    # ESP32-S3 (ESP-IDF, C); portable core tested on the host
 ├─ docs/
 │  ├─ adr/                # Architecture Decision Records
 │  └─ hardware/           # Bills of materials, wiring, bring-up per body
@@ -608,7 +608,7 @@ ms-minutes/
 - **Structured logging** (pino) with `turnId`, `bodyId`, `conversationId`.
 - **Latency dashboard** for the voice budget (Phase 3+).
 - **Personality evals:** scripted conversations checked for staying in character, sensible affect choices, appropriate silence and correct tool use. Run in CI against prompt changes.
-- **Protocol contract tests:** every body implementation is tested against `packages/protocol` fixtures.
+- **Protocol contract tests:** every body implementation is tested against `packages/protocol/fixtures` (one valid example per message type, plus rejected messages with their reasons). The TypeScript codec and the firmware's C codec both run against them.
 
 ---
 
@@ -626,7 +626,7 @@ ms-minutes/
 | **3 — Voice**                   | Browser mic, VAD, streaming STT/TTS, barge-in, amplitude mouth sync        | Spoken round trip ≤ ~1.5 s and interruptible                              |
 | **5 — Memory**                  | Postgres, extraction, retrieval, memory viewer                             | She remembers a preference the next day                                   |
 | **6 — Skills**                  | Skill framework, timer/reminder/weather, risk tiers                        | Timer runs on the clock face; she speaks when it fires                    |
-| **7 — Real Device**             | Hardware track H0–H4 (below) meets the brain                               | Same brain, now physically on the desk                                    |
+| **7 — Real Device**             | Hardware track H0–H4 (below) meets the brain; firmware in `firmware/`      | Same brain, now physically on the desk                                    |
 | **8 — Mobile**                  | Mobile body, presence, cross-body handoff                                  | Conversation started at the desk continues on the phone                   |
 | **9 — Vision & Proactivity**    | Camera body, significance scoring, interruption policy, privacy controls   | She speaks up rarely and appropriately                                    |
 | **10 — Multiple Bodies**        | Arm, car, home bridge; tier-3 safety                                       | A new body joins via `hello` with no brain changes                        |
@@ -637,11 +637,11 @@ ms-minutes/
 | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------- |
 | **H0 — Parts**          | Order the BOM ([docs/hardware/desk-companion.md](docs/hardware/desk-companion.md)) | All parts on the desk                             | —                |
 | **H1 — Bring-up**       | Board, display, speaker, mic each tested on their own (ESP-IDF)                    | Static face drawn; tone plays; mic loopback works | —                |
-| **H2 — Connected body** | Firmware speaks the Body Protocol; renders `expression.set` with the ported rig    | Brain changes the face on the real screen         | Phase 0 ✓, 2     |
-| **H3 — Voice body**     | Push-to-talk audio up, TTS audio down, amplitude mouth sync                        | You talk to her on the device                     | Phase 1, 3       |
+| **H2 — Connected body** | Firmware speaks the Body Protocol; renders `expression.set` with the ported rig    | Brain changes the face on the real screen         | Phase 0 ✓, 2 ✓   |
+| **H3 — Voice body**     | Push-to-talk audio up, TTS audio down, amplitude mouth sync                        | You talk to her on the device                     | Phase 1 ✓, 3 ✓   |
 | **H4 — Standalone**     | Battery, Wi-Fi provisioning, OTA, wake word, enclosure                             | She lives on the desk unplugged                   | —                |
 
-The browser body (Phases 2–3) stays the fast place to iterate: the face and voice are designed there at 240×240, then ported to the device in H2–H3.
+The browser body (Phases 2–3) stays the fast place to iterate: the face and voice are designed there at 240×240, then ported to the device in H2–H3. The firmware for H2–H3 is written ([firmware/desk-companion](firmware/desk-companion/README.md), ADR-0013); its portable core is tested on the host in CI, and the rest waits for parts (H0–H1).
 
 ---
 
@@ -675,6 +675,7 @@ ADRs live in `docs/adr/` using the format: _Context → Decision → Consequence
 | 0010 | Local hearing in the brain, VAD on the body, real barge-in         | Accepted |
 | 0011 | Long-term memory in Postgres + pgvector, embedded by default       | Accepted |
 | 0012 | Skills behind a policy gate; timers and reminders fire proactively | Accepted |
+| 0013 | Desk companion firmware as a thin client with a shared face        | Accepted |
 
 ---
 

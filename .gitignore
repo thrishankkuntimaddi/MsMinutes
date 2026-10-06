@@ -7,3 +7,9 @@ coverage/
 *.log
 .DS_Store
 data/
+# firmware
+firmware/**/build/
+firmware/**/managed_components/
+firmware/**/dependencies.lock
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old

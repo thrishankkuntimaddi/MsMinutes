@@ -1,0 +1,73 @@
+[
+  {
+    "name": "wrong protocol version",
+    "direction": "body-to-brain",
+    "code": "unsupported_version",
+    "message": {
+      "v": 2,
+      "id": "x1",
+      "type": "heartbeat",
+      "bodyId": "desk-01",
+      "ts": 1759640415000,
+      "payload": {}
+    }
+  },
+  {
+    "name": "unknown message type",
+    "direction": "body-to-brain",
+    "code": "invalid_message",
+    "message": {
+      "v": 1,
+      "id": "x2",
+      "type": "teleport",
+      "bodyId": "desk-01",
+      "ts": 1759640415000,
+      "payload": {}
+    }
+  },
+  {
+    "name": "body id with spaces and capitals",
+    "direction": "body-to-brain",
+    "code": "invalid_message",
+    "message": {
+      "v": 1,
+      "id": "x3",
+      "type": "heartbeat",
+      "bodyId": "Desk 01",
+      "ts": 1759640415000,
+      "payload": {}
+    }
+  },
+  {
+    "name": "intensity out of range",
+    "direction": "brain-to-body",
+    "code": "invalid_message",
+    "message": {
+      "v": 1,
+      "id": "x4",
+      "type": "expression.set",
+      "bodyId": "desk-01",
+      "ts": 1759640415000,
+      "payload": { "affect": "happy", "intensity": 1.5, "transitionMs": 300 }
+    }
+  },
+  {
+    "name": "unknown affect",
+    "direction": "brain-to-body",
+    "code": "invalid_message",
+    "message": {
+      "v": 1,
+      "id": "x5",
+      "type": "expression.set",
+      "bodyId": "desk-01",
+      "ts": 1759640415000,
+      "payload": { "affect": "bored", "intensity": 0.5, "transitionMs": 300 }
+    }
+  },
+  {
+    "name": "not JSON",
+    "direction": "brain-to-body",
+    "code": "invalid_json",
+    "raw": "{\"v\":1,"
+  }
+]

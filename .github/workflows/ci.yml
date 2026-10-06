@@ -19,3 +19,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm test
+
+  firmware-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C firmware/desk-companion/host check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: poses
+          path: firmware/desk-companion/host/build/poses.png

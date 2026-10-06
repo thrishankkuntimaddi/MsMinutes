@@ -7,9 +7,9 @@ The architecture is described in [ARCHITECTURE.md](ARCHITECTURE.md), and key dec
 
 ## Status
 
-**Phase 1: Brain.** She talks. A body sends what the user said, the brain asks Claude, and her reply streams back with expressions for her face. The conversation is shared across bodies. Turns are traced at `GET /api/turns`.
+**v0.7.** Phases 1–6 are done: she talks (Claude or a local model), shows her mood on an animated face, speaks and hears with local neural voice and speech recognition, remembers you across restarts, and runs timers, reminders and the weather, speaking up when one fires. Turns are traced at `GET /api/turns`.
 
-**Focus:** the brain + the ESP32 desk companion, built in parallel. See the [hardware list](docs/hardware/desk-companion.md).
+**Phase 7, the real device:** the ESP32-S3 firmware is written ([firmware/desk-companion](firmware/desk-companion/README.md)) and its portable core is tested here on every push. It is waiting for the parts on the [hardware list](docs/hardware/desk-companion.md).
 
 ## Layout
 
@@ -20,6 +20,7 @@ apps/web-body       The browser body: her animated face, voice and microphone
 packages/character  Her face as a parameter rig: presets, springs, idle life, lip-sync
 packages/protocol   The Body Protocol: zod schemas, types, codec, JSON Schema
 packages/persona    Who she is: persona.md becomes her system prompt
+firmware/desk-companion  ESP32-S3 firmware: her face in C, push-to-talk, the Body Protocol
 docs/adr            Architecture Decision Records
 docs/hardware       Parts lists, wiring and bring-up for physical bodies
 ```
@@ -75,17 +76,19 @@ Her personality lives in [packages/persona/persona.md](packages/persona/persona.
 
 ## Scripts
 
-| Script                 | What it does                                           |
-| ---------------------- | ------------------------------------------------------ |
-| `pnpm dev:brain`       | Run the brain with reload on change                    |
-| `pnpm stub-body`       | Connect a terminal body to the brain                   |
-| `pnpm dev:web`         | Serve the browser body (proxies `/ws` to the brain)    |
-| `pnpm test`            | Run all tests                                          |
-| `pnpm typecheck`       | Typecheck the whole monorepo                           |
-| `pnpm lint`            | ESLint                                                 |
-| `pnpm format`          | Prettier                                               |
-| `pnpm check`           | Typecheck + lint + format check + tests (what CI runs) |
-| `pnpm schema:generate` | Regenerate JSON Schema for non-TypeScript bodies       |
+| Script                  | What it does                                            |
+| ----------------------- | ------------------------------------------------------- |
+| `pnpm dev:brain`        | Run the brain with reload on change                     |
+| `pnpm stub-body`        | Connect a terminal body to the brain                    |
+| `pnpm dev:web`          | Serve the browser body (proxies `/ws` to the brain)     |
+| `pnpm test`             | Run all tests                                           |
+| `pnpm typecheck`        | Typecheck the whole monorepo                            |
+| `pnpm lint`             | ESLint                                                  |
+| `pnpm format`           | Prettier                                                |
+| `pnpm check`            | Typecheck + lint + format check + tests (what CI runs)  |
+| `pnpm schema:generate`  | Regenerate JSON Schema for non-TypeScript bodies        |
+| `pnpm firmware:presets` | Regenerate the firmware's rig tables from `character`   |
+| `pnpm firmware:check`   | Build and test the firmware core with the host compiler |
 
 ## Brain endpoints
 

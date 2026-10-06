@@ -28,7 +28,7 @@ type Eye = "both" | "left" | "right";
 type Blink = { start: number; eye: Eye; close: number; hold: number; open: number };
 
 /** [stiffness, damping ratio] per parameter. Fast for eyes and mouth, loose for the body. */
-const TUNING: Record<ParamKey, [number, number]> = {
+export const TUNING: Record<ParamKey, [number, number]> = {
   eyeOpen: [260, 0.75],
   eyeSquint: [200, 0.8],
   pupilX: [520, 0.82],

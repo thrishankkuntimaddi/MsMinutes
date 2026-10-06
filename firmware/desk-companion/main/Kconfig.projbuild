@@ -1,0 +1,123 @@
+menu "Ms. Minutes desk companion"
+
+    menu "Network"
+        config DESK_WIFI_SSID
+            string "Wi-Fi SSID"
+            default "your-network"
+        config DESK_WIFI_PASSWORD
+            string "Wi-Fi password"
+            default ""
+        config DESK_BRAIN_URL
+            string "Brain WebSocket URL"
+            default "ws://192.168.1.10:7700/ws"
+            help
+                The brain must listen on the LAN: HOST=0.0.0.0 in its .env.
+        config DESK_BODY_ID
+            string "Body id"
+            default "desk-01"
+            help
+                Lowercase letters, digits, '-' or '_' (max 64). Reconnecting with the same
+                id replaces the old connection.
+        config DESK_NTP_SERVER
+            string "NTP server"
+            default "pool.ntp.org"
+        config DESK_TZ
+            string "Time zone (POSIX TZ string)"
+            default "IST-5:30"
+            help
+                For the time in her dial window, e.g. "CET-1CEST,M3.5.0,M10.5.0/3" or
+                "PST8PDT,M3.2.0,M11.1.0". Match TIMEZONE in the brain's .env.
+        config DESK_WS_MAX_MESSAGE_KB
+            int "Largest protocol frame to accept (KB)"
+            default 640
+            help
+                Her voice arrives as base64 PCM16 chunks of up to ~4 s (ARCHITECTURE §10.3),
+                about 260 KB each; the protocol allows up to 512 KB of audio per frame.
+    endmenu
+
+    menu "Display (GC9A01, SPI2)"
+        config DESK_PIN_LCD_SCLK
+            int "SCLK"
+            default 12
+        config DESK_PIN_LCD_MOSI
+            int "MOSI"
+            default 11
+        config DESK_PIN_LCD_CS
+            int "CS"
+            default 10
+        config DESK_PIN_LCD_DC
+            int "DC"
+            default 9
+        config DESK_PIN_LCD_RST
+            int "RST (-1 if tied to EN)"
+            default 14
+        config DESK_PIN_LCD_BL
+            int "Backlight (PWM, -1 if always on)"
+            default 13
+        config DESK_LCD_SPI_HZ
+            int "SPI clock (Hz)"
+            default 40000000
+        config DESK_LCD_INVERT
+            bool "Invert colours"
+            default y
+            help
+                Most GC9A01 modules need inversion; turn it off if the face looks negative.
+        config DESK_BRIGHTNESS
+            int "Backlight brightness (%)"
+            range 5 100
+            default 80
+    endmenu
+
+    menu "Audio"
+        config DESK_HAS_SPEAKER
+            bool "MAX98357A amplifier on I2S"
+            default y
+        config DESK_PIN_AMP_BCLK
+            int "Amp BCLK"
+            default 15
+        config DESK_PIN_AMP_WS
+            int "Amp LRC"
+            default 16
+        config DESK_PIN_AMP_DOUT
+            int "Amp DIN"
+            default 17
+        config DESK_HAS_MIC
+            bool "INMP441 microphone on I2S"
+            default y
+        config DESK_PIN_MIC_BCLK
+            int "Mic SCK"
+            default 4
+        config DESK_PIN_MIC_WS
+            int "Mic WS"
+            default 5
+        config DESK_PIN_MIC_DIN
+            int "Mic SD"
+            default 6
+        config DESK_MIC_GAIN_SHIFT
+            int "Mic gain: right shift from 32-bit samples to 16-bit"
+            range 8 16
+            default 14
+            help
+                INMP441 gives 24-bit samples in 32-bit slots. 16 is unity, smaller is louder.
+        config DESK_MAX_UTTERANCE_S
+            int "Longest push-to-talk utterance (s)"
+            default 30
+    endmenu
+
+    menu "Button and battery"
+        config DESK_PIN_BUTTON
+            int "Talk button (to GND, internal pull-up)"
+            default 18
+        config DESK_HAS_BATTERY
+            bool "Battery sense on ADC1"
+            default y
+        config DESK_BATTERY_ADC_CHANNEL
+            int "ADC1 channel (GPIO1 = channel 0)"
+            range 0 9
+            default 0
+        config DESK_BATTERY_DIVIDER
+            int "Divider ratio ×100 (100k/100k = 200)"
+            default 200
+    endmenu
+
+endmenu

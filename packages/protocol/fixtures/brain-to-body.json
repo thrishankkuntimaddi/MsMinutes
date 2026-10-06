@@ -1,0 +1,130 @@
+{
+  "welcome": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000001",
+    "type": "welcome",
+    "bodyId": "desk-01",
+    "ts": 1759640400100,
+    "replyTo": "b1a7c2e0-0001-4000-8000-000000000001",
+    "payload": {
+      "sessionId": "5f1c3c2a-7a2e-4b1c-9d3e-2a6b8c9d0e1f",
+      "persona": { "name": "Ms. Minutes" },
+      "permissions": ["speak.audio", "listen", "express", "display.timer", "alarm.ring"],
+      "heartbeatIntervalMs": 15000,
+      "audio": true,
+      "hearing": true
+    }
+  },
+  "state.set": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000002",
+    "type": "state.set",
+    "bodyId": "desk-01",
+    "ts": 1759640420100,
+    "payload": { "mode": "thinking" }
+  },
+  "expression.set": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000003",
+    "type": "expression.set",
+    "bodyId": "desk-01",
+    "ts": 1759640420600,
+    "payload": {
+      "affect": "happy",
+      "intensity": 0.7,
+      "transitionMs": 300,
+      "blend": [{ "affect": "sleepy", "weight": 0.3 }]
+    }
+  },
+  "speech.text.delta": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000004",
+    "type": "speech.text.delta",
+    "bodyId": "desk-01",
+    "ts": 1759640420700,
+    "payload": { "turnId": "7c0d9e8f-0003-4000-8000-000000000001", "text": "Four minutes, " }
+  },
+  "speech.marks": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000005",
+    "type": "speech.marks",
+    "bodyId": "desk-01",
+    "ts": 1759640421200,
+    "payload": {
+      "turnId": "7c0d9e8f-0003-4000-8000-000000000001",
+      "seq": 0,
+      "marks": [
+        { "t": 40, "kind": "word", "value": "Four" },
+        { "t": 380, "kind": "word", "value": "minutes," }
+      ]
+    }
+  },
+  "speech.audio.chunk": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000006",
+    "type": "speech.audio.chunk",
+    "bodyId": "desk-01",
+    "ts": 1759640421210,
+    "payload": {
+      "turnId": "7c0d9e8f-0003-4000-8000-000000000001",
+      "seq": 0,
+      "codec": "pcm16",
+      "sampleRate": 24000,
+      "data": "AAD/f/9/AAABgAGAAAA="
+    }
+  },
+  "speech.end": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000007",
+    "type": "speech.end",
+    "bodyId": "desk-01",
+    "ts": 1759640423000,
+    "payload": { "turnId": "7c0d9e8f-0003-4000-8000-000000000001" }
+  },
+  "speech.cancel": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000008",
+    "type": "speech.cancel",
+    "bodyId": "desk-01",
+    "ts": 1759640422000,
+    "payload": { "turnId": "7c0d9e8f-0003-4000-8000-000000000001" }
+  },
+  "transcript": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000009",
+    "type": "transcript",
+    "bodyId": "desk-01",
+    "ts": 1759640422300,
+    "payload": { "text": "Set a timer for four minutes, please." }
+  },
+  "capability.call": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000010",
+    "type": "capability.call",
+    "bodyId": "desk-01",
+    "ts": 1759640421000,
+    "payload": {
+      "callId": "a9f0e1d2-0002-4000-8000-000000000011",
+      "name": "display.timer",
+      "args": {
+        "timers": [
+          {
+            "id": "t-1",
+            "kind": "timer",
+            "label": "tea",
+            "endsAt": 1759640660000,
+            "durationSec": 240
+          }
+        ]
+      }
+    }
+  },
+  "error": {
+    "v": 1,
+    "id": "a9f0e1d2-0002-4000-8000-000000000012",
+    "type": "error",
+    "bodyId": "desk-01",
+    "ts": 1759640430000,
+    "payload": { "code": "llm_unavailable", "message": "Couldn't reach Claude.", "fatal": false }
+  }
+}

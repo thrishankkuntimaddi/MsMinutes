@@ -16,6 +16,9 @@ const ws = new WebSocket(url);
 const input = createInterface({ input: process.stdin, output: process.stdout, prompt: "you › " });
 let heartbeat: NodeJS.Timeout | undefined;
 let name = "brain";
+/** Lines typed (or piped) before she's here wait for her welcome. */
+let ready = false;
+const pending: string[] = [];
 
 const send = (message: BodyToBrainMessage) => ws.send(encode(message));
 const write = (text: string) => process.stdout.write(text);
@@ -51,6 +54,8 @@ ws.on("message", (raw) => {
         message.payload.heartbeatIntervalMs,
       );
       console.log(`✓ ${name} is here. Type to talk, Ctrl+C to leave.\n`);
+      ready = true;
+      for (const text of pending.splice(0)) say(text);
       input.prompt();
       break;
     }
@@ -73,10 +78,13 @@ ws.on("message", (raw) => {
   }
 });
 
+const say = (text: string) => send(bodyMessage("event.utterance.text", bodyId, { text }));
+
 input.on("line", (line) => {
   const text = line.trim();
   if (!text) return input.prompt();
-  send(bodyMessage("event.utterance.text", bodyId, { text }));
+  if (ready) say(text);
+  else pending.push(text);
 });
 
 ws.on("close", (code, reason) => {

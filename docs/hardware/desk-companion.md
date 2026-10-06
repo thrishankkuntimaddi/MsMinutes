@@ -136,8 +136,8 @@ On the XIAO ESP32S3 (11 GPIOs), put the mic and amp on **one full-duplex I²S** 
 | Concern           | Choice                                                                                                                     |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Framework         | **ESP-IDF 5.x** (C/C++). Arduino is fine for bring-up tests, but ESP-IDF gives full control of I²S, PSRAM, ESP-SR and OTA. |
-| Graphics          | **LVGL** (or a direct framebuffer for the face), driving the GC9A01 over SPI with DMA                                      |
-| Character         | Port of `packages/character`: parameter rig + JSON presets, same as the web prototype (ARCHITECTURE §9)                    |
+| Graphics          | A direct framebuffer with a small anti-aliased rasterizer (no LVGL), driving the GC9A01 over SPI with DMA                  |
+| Character         | Port of `packages/character`: the rig in C, presets generated from the package (`pnpm firmware:presets`), ARCHITECTURE §9  |
 | Brain connection  | `esp_websocket_client` + cJSON, speaking the Body Protocol (validated against `packages/protocol/schema/*.json`)           |
 | Audio in          | I²S RX 16 kHz. INMP441 gives 24-bit samples in 32-bit slots, converted to 16-bit PCM before sending                        |
 | Audio out         | I²S TX, PCM16 from the brain                                                                                               |
@@ -146,7 +146,7 @@ On the XIAO ESP32S3 (11 GPIOs), put the mic and amp on **one full-duplex I²S** 
 | Updates           | OTA over HTTPS from the brain                                                                                              |
 | Safety/robustness | Reconnect with backoff; show an "offline" expression when the brain is unreachable; watchdog                               |
 
-Firmware lives in `firmware/desk-companion/`.
+Firmware lives in [`firmware/desk-companion/`](../../firmware/desk-companion/README.md); its README maps the bring-up steps below to what the log should show.
 
 ---
 
