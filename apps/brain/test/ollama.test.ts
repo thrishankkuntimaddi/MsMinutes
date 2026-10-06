@@ -57,9 +57,10 @@ describe("OllamaLLM", () => {
     expect(message.stop_reason).toBe("end_turn");
     expect(message.usage).toMatchObject({ input_tokens: 42, output_tokens: 5 });
     expect(seen.body).toMatchObject({ model: "tiny", stream: true });
-    expect((seen.body!.tools as { function: { name: string } }[])[0]!.function.name).toBe(
-      "set_expression",
-    );
+    // Moods come from inline tags with a local model; the expression tool only confuses it.
+    expect(
+      (seen.body!.tools as { function: { name: string } }[]).map((t) => t.function.name),
+    ).toEqual(tools.map((t) => t.name).filter((n) => n !== "set_expression"));
   });
 
   it("turns tool calls into tool_use blocks", async () => {

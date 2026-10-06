@@ -58,6 +58,34 @@ describe("motion", () => {
     expect(frames.at(-1)!.x).toBeCloseTo(0, 2);
   });
 
+  it("drops in from the air, lands, and leaves by the side", () => {
+    const m = new Motion({ random: () => 0.5 });
+    m.autopilot = false;
+    m.appear(0.3, 120, -1);
+    expect(m.update(0.016).lift).toBeGreaterThan(100);
+    for (let i = 0; i < 120; i++) m.update(1 / 60);
+    const landed = m.update(1 / 60);
+    expect(landed.lift).toBe(0);
+    expect(landed.x).toBeCloseTo(0.3);
+    m.exit(1);
+    for (let i = 0; i < 240; i++) m.update(1 / 60);
+    expect(m.update(1 / 60).x).toBeGreaterThan(1.5);
+  });
+
+  it("covers a wider stage at the same pace when its reach is larger", () => {
+    const near = new Motion({ random: () => 0.5 });
+    const far = new Motion({ random: () => 0.5 });
+    near.autopilot = far.autopilot = false;
+    far.reach = 3;
+    near.leap(0.9, 0);
+    far.leap(0.9, 0);
+    for (let i = 0; i < 30; i++) {
+      near.update(1 / 60);
+      far.update(1 / 60);
+    }
+    expect(far.update(1 / 60).x).toBeLessThan(near.update(1 / 60).x);
+  });
+
   it("wanders on its own when idle", () => {
     const m = new Motion({ random: () => 0.1 });
     const frames = run(m, 20);

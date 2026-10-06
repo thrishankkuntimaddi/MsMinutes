@@ -88,6 +88,8 @@ export class Motion {
 
   /** Idle wandering: off while she's talking or listening. */
   autopilot = true;
+  /** How wide this stage is next to the TV's: her speed across it is divided by it. */
+  reach = 1;
   #nextWander = 6;
 
   constructor(options: { random?: () => number } = {}) {
@@ -191,6 +193,36 @@ export class Motion {
     );
   }
 
+  /** Run off one side of the stage (-1 left, 1 right) until she's out of view. */
+  exit(side: -1 | 1 = 1): void {
+    this.#tasks = [];
+    this.#danceUntil = -1;
+    this.#sit.target = 0;
+    this.#queue(this.#walkTo(side * 1.9, "run"));
+  }
+
+  /** Put her at `x`, `lift` body units up in the air: she drops from there and lands. */
+  appear(x: number, lift: number, heading: -1 | 1 = 1): void {
+    this.#tasks = [];
+    this.#danceUntil = -1;
+    this.#x = x;
+    this.#heading = heading;
+    this.#gait = "stand";
+    this.#sit.value = this.#sit.target = 0;
+    this.#lift = Math.max(0, lift);
+    this.#vy = 0;
+    this.#airborne = this.#lift > 0;
+    this.#yaw.value = this.#yaw.target = 0;
+    this.#queue(this.#rest());
+  }
+
+  /** Run to `x`, face you and jump with upward speed `vy` (body units per second). */
+  leap(x: number, vy: number): void {
+    this.#tasks = [];
+    this.#danceUntil = -1;
+    this.#queue(this.#standUp(), this.#walkTo(x, "run"), this.#face(0), this.#jump(vy / 520));
+  }
+
   update(dt: number): MotionFrame {
     const t = (this.#t += dt);
 
@@ -285,7 +317,8 @@ export class Motion {
       if (dir) this.#heading = dir;
       // Three-quarter view toward where she's going, like the reference poses.
       this.#yaw.target = dir * (gait === "run" ? 0.75 : 0.55);
-      const speed = (gait === "run" ? RUN_SPEED : WALK_SPEED) * Math.max(0.15, this.#speed);
+      const speed =
+        ((gait === "run" ? RUN_SPEED : WALK_SPEED) / this.reach) * Math.max(0.15, this.#speed);
       const step = Math.min(Math.abs(x - this.#x), speed * dt);
       this.#x += dir * step;
       if (Math.abs(x - this.#x) < 0.005) {

@@ -30,7 +30,6 @@
               <div class="tube">
                 <canvas id="face" class="face" aria-label="Miss Minutes"></canvas>
                 <canvas id="static" class="static"></canvas>
-                <p class="caption" id="caption" aria-live="polite"></p>
                 <div class="lcd" id="lcd" hidden aria-live="off"></div>
               </div>
               <div class="scanlines"></div>
@@ -51,6 +50,8 @@
         <div class="tv-feet"><span></span><span></span></div>
       </div>
 
+      <p class="caption" id="caption" aria-live="polite"></p>
+
       <section class="console" id="console" hidden>
         <p class="heard" id="heard" aria-live="polite"></p>
         <form class="dock" id="dock" autocomplete="off">
@@ -70,11 +71,21 @@
         </form>
         <p class="status">
           <span class="dot" id="dot"></span><span id="status">Connecting to her brain…</span>
+          <button
+            type="button"
+            class="link"
+            id="roam"
+            title="She steps out of the TV into the room"
+          >
+            Come out
+          </button>
           <button type="button" class="link" id="replay">↺ Replay intro</button>
           <button type="button" class="link" id="open-memories">Her memories</button>
         </p>
       </section>
     </main>
+
+    <canvas id="room" class="room-canvas" aria-hidden="true"></canvas>
 
     <dialog class="memories" id="memories" aria-labelledby="memories-title">
       <header>

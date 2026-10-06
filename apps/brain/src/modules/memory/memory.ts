@@ -124,8 +124,12 @@ export class MemoryService {
     // At the start of a conversation, what you talked about last time.
     if (this.#turnsInConversation === 0) {
       const last = await store.lastSummary(this.#conversation?.id);
+      // Background only: a small model otherwise keeps steering back to it.
       if (last?.summary)
-        lines.push(`Last time you talked (${this.#when(last.lastTurnAt)}): ${last.summary}`);
+        lines.push(
+          `Last time you talked (${this.#when(last.lastTurnAt)}): ${last.summary}`,
+          "That was then. Don't bring it up or ask about it unless they do; talk about what they say now.",
+        );
     }
     return { note: lines.length ? `<memory>\n${lines.join("\n")}\n</memory>` : "", fresh: started };
   }

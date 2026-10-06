@@ -52,10 +52,14 @@ export class BrainLink {
             { name: "speak.audio", description: "Play her synthesized voice", riskTier: 0 },
             {
               name: "animate",
-              description: "Move her body inside the TV: walk, jump, turn around and so on",
+              description:
+                "Move her body: walk, jump, turn around and so on. come_out steps out of the TV " +
+                "into the room; go_home climbs back into the TV",
               schema: {
                 type: "object",
-                properties: { action: { type: "string", enum: [...ACTIONS] } },
+                properties: {
+                  action: { type: "string", enum: [...ACTIONS, "come_out", "go_home"] },
+                },
                 required: ["action"],
               },
               riskTier: 0,

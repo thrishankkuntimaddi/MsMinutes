@@ -1,15 +1,35 @@
 import type { HandPose, RigFrame } from "@ms-minutes/character";
 
 /**
- * Logical stage inside the TV (4:3). She stands on a floor near the bottom and has
- * room to walk, run and jump. Body units: her face has radius R = 100.
+ * Where she stands, in logical canvas units: its size, the floor line, how far x = ±1
+ * reaches from the middle, how big she is, and whether the stage draws its own wall and
+ * floor. Body units: her face has radius R = 100.
  */
-const W = 480;
-const H = 360;
-const FLOOR = 300;
-const BASE_SCALE = 0.7;
-/** Stage pixels from the middle to where x = ±1 puts her. */
-const RANGE = 112;
+export type Stage = {
+  W: number;
+  H: number;
+  FLOOR: number;
+  RANGE: number;
+  BASE_SCALE: number;
+  backdrop: boolean;
+};
+
+/** Inside the TV (4:3): a floor near the bottom with room to walk, run and jump. */
+export const TV_STAGE: Stage = {
+  W: 480,
+  H: 360,
+  FLOOR: 300,
+  RANGE: 112,
+  BASE_SCALE: 0.7,
+  backdrop: true,
+};
+
+/** Out in the room: the whole window, her feet just above the console, no wall of her own. */
+export function roomStage(width: number, height: number): Stage {
+  const H = 600;
+  const W = (H * width) / Math.max(1, height);
+  return { W, H, FLOOR: H - 125, RANGE: Math.max(60, W / 2 - 130), BASE_SCALE: 1, backdrop: false };
+}
 
 const R = 100;
 const COIN = 24; // thickness of her case
@@ -44,35 +64,65 @@ export class ClockRenderer {
   timer: TimerFace | null = null;
   readonly #canvas: HTMLCanvasElement;
   readonly #ctx: CanvasRenderingContext2D;
-  #view = { x: W / 2, y: FLOOR - FEET * BASE_SCALE, s: BASE_SCALE };
+  /** The room follows the window's shape; the TV is always 4:3. */
+  readonly #room: boolean;
+  #stage: Stage = TV_STAGE;
+  #view = {
+    x: TV_STAGE.W / 2,
+    y: TV_STAGE.FLOOR - FEET * TV_STAGE.BASE_SCALE,
+    s: TV_STAGE.BASE_SCALE,
+  };
   #dust: { x: number; y: number; r: number; life: number; vx: number }[] = [];
   #lastT = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options: { room?: boolean } = {}) {
     this.#canvas = canvas;
     this.#ctx = canvas.getContext("2d")!;
+    this.#room = options.room ?? false;
+  }
+
+  /** The stage as last drawn. */
+  get stage(): Stage {
+    return this.#stage;
   }
 
   /** Maps a client point to face space (-1..1 around her face), for eye tracking. */
   toFaceSpace(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.#canvas.getBoundingClientRect();
+    const { W, H } = this.#stage;
     const sx = ((clientX - rect.left) / rect.width) * W;
     const sy = ((clientY - rect.top) / rect.height) * H;
     const { x, y, s } = this.#view;
     return { x: (sx - x) / (R * 2.4 * s), y: (sy - (y - 14 * s)) / (R * 2.4 * s) };
   }
 
-  draw(f: RigFrame): void {
+  /** Sizes the canvas to its pixels and maps the stage onto it. */
+  #fit(): Stage {
     const ctx = this.#ctx;
     const dpr = window.devicePixelRatio || 1;
     const rect = this.#canvas.getBoundingClientRect();
+    if (this.#room) this.#stage = roomStage(rect.width, rect.height);
     const pw = Math.round(rect.width * dpr);
     const ph = Math.round(rect.height * dpr);
     if (this.#canvas.width !== pw || this.#canvas.height !== ph) {
       this.#canvas.width = pw;
       this.#canvas.height = ph;
     }
+    const { W, H } = this.#stage;
     ctx.setTransform(pw / W, 0, 0, ph / H, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    return this.#stage;
+  }
+
+  /** The stage with nobody on it: where she was, while she's out in the room. */
+  drawEmpty(): void {
+    const { W } = this.#fit();
+    if (this.#stage.backdrop) this.#backdrop(W / 2);
+  }
+
+  draw(f: RigFrame): void {
+    const ctx = this.#ctx;
+    const { W, FLOOR, RANGE, BASE_SCALE } = this.#fit();
     const dt = clamp(f.t - this.#lastT, 0, 0.05);
     this.#lastT = f.t;
 
@@ -82,7 +132,7 @@ export class ClockRenderer {
     const cy = FLOOR - s * (FEET - drop + f.lift - f.bounce);
     this.#view = { x: cx, y: cy, s };
 
-    this.#stage(cx);
+    if (this.#stage.backdrop) this.#backdrop(cx);
     this.#speedLines(f, cx, cy, s, dt);
     this.#shadow(f, cx, s);
 
@@ -113,8 +163,9 @@ export class ClockRenderer {
 
   // ---------- Stage ----------
 
-  #stage(cx: number): void {
+  #backdrop(cx: number): void {
     const ctx = this.#ctx;
+    const { W, H, FLOOR } = this.#stage;
     const wall = ctx.createLinearGradient(0, 0, 0, FLOOR);
     wall.addColorStop(0, "#2a160a");
     wall.addColorStop(1, "#5a3318");
@@ -166,6 +217,7 @@ export class ClockRenderer {
 
   #shadow(f: RigFrame, cx: number, s: number): void {
     const ctx = this.#ctx;
+    const { FLOOR } = this.#stage;
     const k = 1 - clamp(f.lift / 260, 0, 0.6);
     ctx.save();
     ctx.translate(cx, FLOOR + 1);
@@ -183,6 +235,7 @@ export class ClockRenderer {
   /** Cartoon speed lines and dust puffs when she runs (reference pose 7). */
   #speedLines(f: RigFrame, cx: number, cy: number, s: number, dt: number): void {
     const ctx = this.#ctx;
+    const { FLOOR } = this.#stage;
     const run = clamp(f.pace - 1, 0, 1);
     const behind = -f.heading;
     if (run > 0.05) {

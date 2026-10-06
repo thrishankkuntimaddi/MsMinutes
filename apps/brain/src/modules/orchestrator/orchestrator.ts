@@ -228,6 +228,9 @@ export class Orchestrator {
 
         firstDeltaOfCall = true;
         partial = "";
+        /** What this call said once tags are out, and the tags: her reply as history keeps it. */
+        let callText = "";
+        const callTags: Tag[] = [];
         const message = await llm.stream(
           {
             system: systemPrompt,
@@ -240,10 +243,14 @@ export class Orchestrator {
             partial += delta;
             const found = tags.push(delta);
             for (const tag of found.tags) this.#applyTag(tag, bodyId, trace);
+            callTags.push(...found.tags);
+            callText += found.text;
             speak(found.text);
           },
         );
-        speak(tags.flush());
+        const rest = tags.flush();
+        callText += rest;
+        speak(rest);
 
         trace.stopReason = message.stop_reason;
         trace.usage.input += message.usage.input_tokens;
@@ -261,7 +268,12 @@ export class Orchestrator {
           throw new TurnAborted(`tool call ended with stop_reason ${message.stop_reason}`);
         }
 
-        this.#history.push({ role: "assistant", content: message.content });
+        // Keep her reply as she should have written it, not as the model did: a small model
+        // copies its own slips ("[right now I am [sad 0.7]") from history into every turn.
+        this.#history.push({
+          role: "assistant",
+          content: asWritten(message.content, callTags, callText),
+        });
         if (toolUses.length === 0) break;
 
         const results = await Promise.all(
@@ -483,4 +495,28 @@ function describe(error: unknown): string {
   if (isCredentialError(error))
     return "No Claude credentials found. Set ANTHROPIC_API_KEY in .env.";
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The text of a model message, normalised: well-formed tags first, then exactly what she said.
+ * Tool-use blocks are kept as they are. If nothing is left, the original is kept.
+ */
+export function asWritten(
+  content: Anthropic.Beta.BetaMessage["content"],
+  tags: readonly Tag[],
+  spoken: string,
+): Anthropic.Beta.BetaMessageParam["content"] {
+  if (!content.some((b) => b.type === "text")) return content;
+  const lead = tags
+    .flatMap((t) =>
+      t.kind === "mood"
+        ? [`[${t.affect} ${t.intensity.toFixed(1)}]`]
+        : t.kind === "action"
+          ? [`[${t.action}]`]
+          : [],
+    )
+    .join(" ");
+  const text = [lead, spoken.trim()].filter(Boolean).join(" ");
+  if (!text) return content;
+  return [{ type: "text", text }, ...content.filter((b) => b.type !== "text")];
 }

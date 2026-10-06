@@ -44,8 +44,40 @@ describe("TagFilter", () => {
 
   it("gives up on a bracket that never closes", () => {
     const filter = new TagFilter();
-    const text = filter.push("[" + "x".repeat(40)).text;
+    const text = filter.push("[" + "x".repeat(100)).text;
     expect(text.startsWith("[x")).toBe(true);
+  });
+
+  it("takes the inner tag of a nested one and drops the words she wrapped around it", () => {
+    const filter = new TagFilter();
+    const parts = ["[right now I am ", "[sad 0.7], hearing", " about it. How are you?"];
+    const out = parts.map((p) => filter.push(p));
+    expect(out.map((o) => o.text).join("") + filter.flush()).toBe(
+      " hearing about it. How are you?",
+    );
+    expect(out.flatMap((o) => o.tags)).toEqual([{ kind: "mood", affect: "sad", intensity: 0.7 }]);
+    const doubled = new TagFilter().push("[[happy 0.6]] Let's go.");
+    expect(doubled.text).toBe(" Let's go.");
+    expect(doubled.tags).toEqual([{ kind: "mood", affect: "happy", intensity: 0.6 }]);
+  });
+
+  it("turns a tool call written as text into the mood it meant, and never reads it aloud", () => {
+    const filter = new TagFilter();
+    const a = filter.push('Sure. [set_expression {"affect": "happy", "intensity": 0.5}] Better?');
+    expect(a.text + filter.flush()).toBe("Sure. Better?");
+    expect(a.tags).toEqual([{ kind: "mood", affect: "happy", intensity: 0.5 }]);
+    const b = new TagFilter().push("[timer_start duration_seconds=240] Tea's on.");
+    expect(b.text).toBe(" Tea's on.");
+    expect(b.tags).toEqual([]);
+  });
+
+  it("drops markup copied from the prompt but keeps real angle brackets", () => {
+    const filter = new TagFilter();
+    const a = filter.push("<memory> I love you <3, and 2 < 3.</context");
+    expect(a.text + filter.flush()).toBe(" I love you <3, and 2 < 3.");
+    expect(a.tags).toEqual([]);
+    const b = new TagFilter();
+    expect((b.push("Fine. [sad 0.").text + b.flush()).trimEnd()).toBe("Fine.");
   });
 });
 

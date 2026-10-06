@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { SET_EXPRESSION } from "../orchestrator/tools.js";
 import { LLMUnavailableError, type LLM, type LLMRequest } from "./llm.js";
 
 export type OllamaOptions = {
@@ -122,14 +123,18 @@ export class OllamaLLM implements LLM {
           keep_alive: "30m",
           options: { num_ctx: contextTokens, ...(maxTokens ? { num_predict: maxTokens } : {}) },
           messages: toOllamaMessages(request),
-          tools: request.tools.map((tool) => ({
-            type: "function",
-            function: {
-              name: tool.name,
-              description: tool.description ?? "",
-              parameters: tool.input_schema,
-            },
-          })),
+          // Small models show moods with inline tags (ADR-0008); offered the tool as well,
+          // they write it into their reply as text instead of calling it.
+          tools: request.tools
+            .filter((tool) => tool.name !== SET_EXPRESSION)
+            .map((tool) => ({
+              type: "function",
+              function: {
+                name: tool.name,
+                description: tool.description ?? "",
+                parameters: tool.input_schema,
+              },
+            })),
         }),
       });
     } catch (err) {

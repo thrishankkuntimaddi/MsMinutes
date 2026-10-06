@@ -7,7 +7,7 @@ import { BrainLink, type LinkStatus } from "./brain.js";
 import { Fx } from "./fx.js";
 import { Listener } from "./listener.js";
 import { setupMemories } from "./memories.js";
-import { ClockRenderer } from "./renderer.js";
+import { ClockRenderer, roomStage } from "./renderer.js";
 import { Speaker } from "./speaker.js";
 import { VoiceQueue } from "./voice-queue.js";
 
@@ -22,6 +22,8 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const rig = new CharacterRig();
 const renderer = new ClockRenderer($<HTMLCanvasElement>("face"));
+/** The whole window, for when she steps out of the TV. */
+const room = new ClockRenderer($<HTMLCanvasElement>("room"), { room: true });
 const speaker = new Speaker();
 const listener = new Listener();
 const fx = new Fx();
@@ -37,8 +39,11 @@ const root = document.documentElement.style;
 // ---------- Her, every frame ----------
 
 let visible = false;
+/** She's out of the TV, walking around the room. */
+let out = false;
 let staticOn = false;
 let last = performance.now();
+let lastFrame: ReturnType<CharacterRig["update"]> | null = null;
 
 function frame(now: number): void {
   const dt = (now - last) / 1000;
@@ -46,7 +51,11 @@ function frame(now: number): void {
   rig.setViseme(audio?.sample() ?? speaker.sample(now));
   showTimers();
   const f = rig.update(dt);
-  if (visible) renderer.draw(f);
+  lastFrame = f;
+  if (out) {
+    renderer.drawEmpty();
+    room.draw(f);
+  } else if (visible) renderer.draw(f);
   if (staticOn) drawStatic();
   root.setProperty("--talk", Math.max(0, f.mouthOpen).toFixed(3));
   requestAnimationFrame(frame);
@@ -55,8 +64,8 @@ requestAnimationFrame(frame);
 
 // Her eyes follow you around the room, unless she's talking to you.
 addEventListener("pointermove", (e) => {
-  if (!visible || talking() || listener.listening) return;
-  const p = renderer.toFaceSpace(e.clientX, e.clientY);
+  if ((!visible && !out) || talking() || listener.listening) return;
+  const p = (out ? room : renderer).toFaceSpace(e.clientX, e.clientY);
   rig.lookAt(p.x, p.y, 1.2);
 });
 
@@ -254,6 +263,11 @@ function onMessage(message: BrainToBodyMessage): void {
         break;
       }
       const action = String(args.action ?? "");
+      if (name === "animate" && (action === "come_out" || action === "go_home") && !turnIgnored) {
+        void (action === "come_out" ? stepOut() : stepIn());
+        link.result(callId, true);
+        break;
+      }
       if (name === "animate" && isAction(action) && !turnIgnored) {
         rig.act(action);
         link.result(callId, true);
@@ -516,6 +530,101 @@ async function listen(): Promise<void> {
 
 mic.addEventListener("click", () => void toggleMic());
 
+// ---------- Out of the TV ----------
+
+const roam = $<HTMLButtonElement>("roam");
+/** She's between the TV and the room right now. */
+let crossing = false;
+/** Top speed in the room: her x axis spans the whole window, not a 4:3 screen. */
+const ROOM_REACH = 2.5;
+
+/**
+ * Where the TV is, in room terms: its middle and its right edge across the window (-1..1),
+ * and how high its floor is above the room's, in body units.
+ */
+function tvInRoom(): { x: number; edge: number; lift: number } {
+  const r = screen.getBoundingClientRect();
+  const { W, H, FLOOR, RANGE, BASE_SCALE } = roomStage(innerWidth, innerHeight);
+  const across = (px: number) => Math.max(-1, Math.min(1, ((px / innerWidth) * W - W / 2) / RANGE));
+  // The TV's own floor sits at 300/360 of the glass.
+  const y = ((r.top + r.height * (300 / 360)) / innerHeight) * H;
+  return {
+    x: across(r.left + r.width / 2),
+    edge: across(r.right + 90),
+    lift: Math.max(0, (FLOOR - y) / BASE_SCALE),
+  };
+}
+
+const landed = async () => {
+  await wait(150);
+  while (lastFrame && lastFrame.lift > 1) await wait(40);
+};
+
+/** She runs off the edge of the glass and drops out of the TV onto the desk. */
+async function stepOut(): Promise<void> {
+  if (out || crossing || !visible) return;
+  crossing = true;
+  roam.disabled = true;
+  rig.setExpression("excited", 0.7);
+  rig.motion.exit(1);
+  const gone = performance.now() + 3000;
+  while (rig.motion.busy && performance.now() < gone) await wait(50);
+
+  fx.static(0.3);
+  const { edge, lift } = tvInRoom();
+  visible = false;
+  out = true;
+  document.body.classList.add("she-out");
+  roam.textContent = "Back in the TV";
+  rig.motion.reach = ROOM_REACH;
+  // Out of the side she ran off, down onto the desk beside the set.
+  rig.motion.appear(edge, lift, -1);
+  await landed();
+  fx.hop();
+  rig.setExpression("happy", 0.9);
+  rig.wave(1.4);
+  crossing = false;
+  roam.disabled = false;
+}
+
+/** She runs under the TV, jumps up into the glass and lands back on her stage. */
+async function stepIn(): Promise<void> {
+  if (!out || crossing) return;
+  crossing = true;
+  roam.disabled = true;
+  const { x, lift } = tvInRoom();
+  // High enough to reach the glass: v² = 2·g·h.
+  rig.motion.leap(x, Math.sqrt(2 * 2600 * (lift + 60)));
+  const timeout = performance.now() + 5000;
+  while (performance.now() < timeout && !(lastFrame && lastFrame.lift >= lift - 10)) await wait(30);
+
+  fx.static(0.3);
+  out = false;
+  document.body.classList.remove("she-out");
+  roam.textContent = "Come out";
+  visible = true;
+  rig.motion.reach = 1;
+  rig.motion.appear(0, 150, 1);
+  await landed();
+  fx.hop();
+  rig.setExpression("happy", 0.8);
+  rig.blink();
+  crossing = false;
+  roam.disabled = false;
+}
+
+/** Back in the TV at once, for the intro. */
+function homeNow(): void {
+  if (!out) return;
+  out = false;
+  document.body.classList.remove("she-out");
+  roam.textContent = "Come out";
+  rig.motion.reach = 1;
+}
+
+roam.addEventListener("click", () => void (out ? stepIn() : stepOut()));
+screen.addEventListener("click", () => void (out ? stepIn() : stepOut()));
+
 // ---------- Screen static ----------
 
 const staticCtx = staticCanvas.getContext("2d")!;
@@ -620,6 +729,7 @@ let run = 0;
 
 async function orientation(): Promise<void> {
   const me = ++run;
+  homeNow();
   voice.cancel();
   audio?.cancel();
   caption.replaceChildren();
