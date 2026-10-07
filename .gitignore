@@ -6,6 +6,10 @@ coverage/
 !.env.example
 *.log
 .DS_Store
+.yarn/
+.pnpm-store/
+.vscode/
+.idea/
 data/
 # firmware
 firmware/**/build/

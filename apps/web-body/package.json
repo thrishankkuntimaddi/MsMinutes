@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "The browser body: her face on a canvas, her voice through speech synthesis.",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

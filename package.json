@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "description": "One Brain. Many Bodies. A persistent AI companion that inhabits many devices.",
+  "license": "MIT",
+  "author": "Thrishank Kuntimaddi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thrishankkuntimaddi/MsMinutes.git"
+  },
+  "homepage": "https://github.com/thrishankkuntimaddi/MsMinutes#readme",
+  "bugs": "https://github.com/thrishankkuntimaddi/MsMinutes/issues",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

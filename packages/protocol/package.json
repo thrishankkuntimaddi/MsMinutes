@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Body Protocol: the typed contract between the brain and every body.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
   },

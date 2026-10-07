@@ -23,9 +23,9 @@ menu "Ms. Minutes desk companion"
             default "pool.ntp.org"
         config DESK_TZ
             string "Time zone (POSIX TZ string)"
-            default "IST-5:30"
+            default "UTC0"
             help
-                For the time in her dial window, e.g. "CET-1CEST,M3.5.0,M10.5.0/3" or
+                For the time in her dial window, e.g. "IST-5:30", "CET-1CEST,M3.5.0,M10.5.0/3" or
                 "PST8PDT,M3.2.0,M11.1.0". Match TIMEZONE in the brain's .env.
         config DESK_WS_MAX_MESSAGE_KB
             int "Largest protocol frame to accept (KB)"

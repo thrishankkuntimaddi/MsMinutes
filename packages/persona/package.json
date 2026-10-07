@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Who Ms. Minutes is: the persona spec that becomes her system prompt.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
   }

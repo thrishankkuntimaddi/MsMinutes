@@ -3,6 +3,8 @@
 > **One Brain. Many Bodies.**
 > A persistent AI companion that talks naturally and inhabits many bodies, starting with a tiny retro clock on the desk.
 
+[![CI](https://github.com/thrishankkuntimaddi/MsMinutes/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/MsMinutes/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 The architecture is described in [ARCHITECTURE.md](ARCHITECTURE.md), and key decisions are recorded in [docs/adr](docs/adr).
 
 ## Status
@@ -52,7 +54,7 @@ pnpm stub-body         # terminal 2: type to talk
 
 ```
 you › Good morning
-Ms. Minutes › [happy 0.5] Good morning, Thrishank! Coffee first, or straight into it?
+Ms. Minutes › [happy 0.5] Good morning, Alex! Coffee first, or straight into it?
 ```
 
 Or meet her in the browser: she introduces herself, then you talk by mic or keyboard and she answers out loud.
@@ -99,3 +101,11 @@ Her personality lives in [packages/persona/persona.md](packages/persona/persona.
 | `GET /health`     | Liveness + protocol version |
 | `GET /api/bodies` | Currently connected bodies  |
 | `WS /ws`          | Body Protocol               |
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get set up and send a change, and the [Code of Conduct](CODE_OF_CONDUCT.md). Found a security problem? See [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © Thrishank Kuntimaddi

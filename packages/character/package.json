@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Her face as a parameter rig: presets, springs, idle life, lip-sync. Renderer-agnostic.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
   },

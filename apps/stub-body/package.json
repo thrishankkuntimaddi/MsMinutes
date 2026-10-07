@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "A minimal terminal body for exercising the Body Protocol.",
+  "license": "MIT",
   "scripts": {
     "start": "tsx --env-file-if-exists=../../.env src/main.ts"
   },
