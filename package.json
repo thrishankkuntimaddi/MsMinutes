@@ -9,6 +9,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node scripts/start.mjs",
     "dev:web": "vite apps/web-body",
     "dev:brain": "tsx watch --env-file-if-exists=.env apps/brain/src/main.ts",
     "start:brain": "tsx --env-file-if-exists=.env apps/brain/src/main.ts",

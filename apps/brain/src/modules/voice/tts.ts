@@ -1,3 +1,5 @@
+import { loadRepairingCache } from "./model-cache.js";
+
 /** Synthesized speech for one piece of text. */
 export type Speech = { samples: Float32Array; sampleRate: number };
 
@@ -60,7 +62,9 @@ export class KokoroTTS implements TTS {
   #load(): Promise<KokoroModel> {
     this.#model ??= import("kokoro-js").then(({ KokoroTTS: Kokoro }) =>
       // fp32 is ~2.5× faster than q8 on CPU (dequantising costs more than it saves).
-      Kokoro.from_pretrained(KOKORO_MODEL, { dtype: "fp32", device: "cpu" }),
+      loadRepairingCache(KOKORO_MODEL, () =>
+        Kokoro.from_pretrained(KOKORO_MODEL, { dtype: "fp32", device: "cpu" }),
+      ),
     ) as Promise<KokoroModel>;
     // A failed load (offline, say) can be retried on the next sentence.
     this.#model.catch(() => (this.#model = null));

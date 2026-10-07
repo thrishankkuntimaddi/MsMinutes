@@ -1,3 +1,5 @@
+import { loadRepairingCache } from "./model-cache.js";
+
 /** Speech-to-text boundary (ADR-0005), so providers can be swapped. */
 export interface STT {
   /** Loads models ahead of the first utterance. */
@@ -39,12 +41,15 @@ export class LocalSTT implements STT {
   }
 
   #load(): Promise<Recognizer> {
-    this.#recognizer ??= import("@huggingface/transformers").then(
-      ({ pipeline }) =>
-        pipeline("automatic-speech-recognition", this.#model, {
-          dtype: "fp32",
-          device: "cpu",
-        }) as unknown as Promise<Recognizer>,
+    this.#recognizer ??= import("@huggingface/transformers").then(({ pipeline }) =>
+      loadRepairingCache(
+        this.#model,
+        () =>
+          pipeline("automatic-speech-recognition", this.#model, {
+            dtype: "fp32",
+            device: "cpu",
+          }) as unknown as Promise<Recognizer>,
+      ),
     );
     this.#recognizer.catch(() => (this.#recognizer = null));
     return this.#recognizer;

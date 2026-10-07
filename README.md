@@ -3,6 +3,30 @@
 > **One Brain. Many Bodies.**
 > A persistent AI companion that talks naturally and inhabits many bodies, starting with a tiny retro clock on the desk.
 
+## Run her (start here)
+
+You need [Node.js 24](https://nodejs.org) and, unless you have a Claude API key, [Ollama](https://ollama.com/download) (a free local model). Then, on Windows, macOS or Linux:
+
+```sh
+git clone https://github.com/thrishankkuntimaddi/MsMinutes.git
+cd MsMinutes
+npm run setup    # once: installs everything, writes .env, downloads her local model
+npm start        # her brain and face together; your browser opens, click Begin
+```
+
+That's all. Stop her with Ctrl+C. To get updates later: `git pull`, then `npm run setup` again.
+
+**Something wrong?**
+
+- _"Brain offline" under the TV:_ the brain crashed. Read the `[brain]` lines in the terminal.
+- _She doesn't answer:_ with Ollama, make sure the Ollama app is running.
+- _Opening her from another computer (e.g. Tailscale):_ run `npm start -- --lan` and use the Network address it prints. The microphone only works on `localhost` or https, so type to her there.
+- _Slow the first time she speaks:_ she's downloading her voice and hearing (~600 MB, once). Set `TTS_PROVIDER=none` and `STT_PROVIDER=none` in `.env` to skip them.
+
+Everything below is for working on her.
+
+## What's in this repo
+
 The architecture is described in [ARCHITECTURE.md](ARCHITECTURE.md), and key decisions are recorded in [docs/adr](docs/adr).
 
 ## Status
@@ -23,9 +47,10 @@ packages/persona    Who she is: persona.md becomes her system prompt
 firmware/desk-companion  ESP32-S3 firmware: her face in C, push-to-talk, the Body Protocol
 docs/adr            Architecture Decision Records
 docs/hardware       Parts lists, wiring and bring-up for physical bodies
+scripts             npm run setup / npm start: one-command setup and launch
 ```
 
-## Getting started
+## Developing
 
 Requires Node 24 (see `.nvmrc`). pnpm is provided through corepack:
 
