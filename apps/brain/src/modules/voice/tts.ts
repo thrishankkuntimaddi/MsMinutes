@@ -1,7 +1,13 @@
+import { perform, planDelivery } from "./delivery.js";
 import { loadRepairingCache } from "./model-cache.js";
 
 /** Synthesized speech for one piece of text. */
-export type Speech = { samples: Float32Array; sampleRate: number };
+export type Speech = {
+  samples: Float32Array;
+  sampleRate: number;
+  /** Word starts, ms, when the voice knows them (otherwise they're estimated). */
+  marks?: { t: number; value: string }[];
+};
 
 /** Thin TTS boundary (ADR-0005), so providers can be swapped. */
 export interface TTS {
@@ -16,6 +22,8 @@ export type KokoroOptions = {
   voice: string;
   /** 1 is natural pace. */
   speed?: number;
+  /** Perform each sentence phrase by phrase, with her own pauses and pacing (default). */
+  perform?: boolean;
 };
 
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
@@ -51,9 +59,19 @@ export class KokoroTTS implements TTS {
     const run = this.#queue.then(async () => {
       if (signal?.aborted) throw new DOMException("speech cancelled", "AbortError");
       const model = await this.#load();
-      const { voice, speed } = this.#options;
-      const out = await model.generate(text, { voice, ...(speed ? { speed } : {}) });
-      return { samples: out.audio, sampleRate: out.sampling_rate };
+      const { voice, speed = 1, perform: performing = true } = this.#options;
+      if (!performing) {
+        const out = await model.generate(text, { voice, speed });
+        return { samples: out.audio, sampleRate: out.sampling_rate };
+      }
+      const phrases = planDelivery(text);
+      const takes = [];
+      for (const phrase of phrases) {
+        if (signal?.aborted) throw new DOMException("speech cancelled", "AbortError");
+        const out = await model.generate(phrase.text, { voice, speed: speed * phrase.pace });
+        takes.push({ samples: out.audio, sampleRate: out.sampling_rate });
+      }
+      return perform(phrases, takes);
     });
     this.#queue = run.catch(() => undefined);
     return run;

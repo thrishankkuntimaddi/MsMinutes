@@ -67,13 +67,16 @@ export class SpeechOut {
     this.#chain = this.#chain.then(async () => {
       if (this.#cancelled) return;
       try {
-        const { samples, sampleRate } = await speech;
+        const { samples, sampleRate, marks } = await speech;
         if (this.#cancelled) return;
         const durationMs = (samples.length / sampleRate) * 1000;
         this.#send("speech.marks", {
           turnId: this.#turnId,
           seq: this.#seq,
-          marks: estimateWordMarks(sentence, durationMs).map((m) => ({ ...m, kind: "word" })),
+          marks: (marks ?? estimateWordMarks(sentence, durationMs)).map((m) => ({
+            ...m,
+            kind: "word",
+          })),
         });
         for (let i = 0; i < samples.length; i += MAX_SAMPLES_PER_CHUNK) {
           this.#send("speech.audio.chunk", {

@@ -16,7 +16,7 @@ const Env = z.object({
   OLLAMA_MODEL: z.string().min(1).default("qwen2.5:3b"),
   TTS_PROVIDER: z.enum(["none", "kokoro"]).default("none"),
   TTS_VOICE: z.string().min(1).default("af_heart"),
-  TTS_SPEED: z.coerce.number().min(0.5).max(2).default(1),
+  TTS_SPEED: z.coerce.number().min(0.5).max(2).default(0.95),
   STT_PROVIDER: z.enum(["none", "local"]).default("none"),
   STT_MODEL: z.string().min(1).default("onnx-community/moonshine-base-ONNX"),
   MEMORY_DB: z.string().default("off"),

@@ -36,13 +36,33 @@ export class AudioVoice {
     this.#analyser = ctx.createAnalyser();
     this.#analyser.fftSize = 1024;
     this.#samples = new Float32Array(this.#analyser.fftSize);
-    // A touch of warmth and presence, like a little speaker in a TV set.
-    const warm = ctx.createBiquadFilter();
-    warm.type = "peaking";
-    warm.frequency.value = 2800;
-    warm.gain.value = 2.5;
-    warm.connect(this.#analyser).connect(destination);
-    this.#out = warm;
+    // Her tone: smooth, rounded and polished. A little lower-mid body so she never sounds
+    // thin, clear articulation without edge, a softened top, and light compression so
+    // she stays even and composed. Nothing robotic.
+    const filter = (type: BiquadFilterType, frequency: number, gain = 0, q = 0.8) => {
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = frequency;
+      f.gain.value = gain;
+      f.Q.value = q;
+      return f;
+    };
+    const rumble = filter("highpass", 85, 0, 0.7);
+    const body = filter("lowshelf", 240, 2.5);
+    const boxy = filter("peaking", 520, -1.5, 1.1);
+    const clarity = filter("peaking", 3200, 1.5, 0.9);
+    const round = filter("highshelf", 7800, -3);
+    const even = ctx.createDynamicsCompressor();
+    even.threshold.value = -22;
+    even.knee.value = 14;
+    even.ratio.value = 2.5;
+    even.attack.value = 0.008;
+    even.release.value = 0.2;
+    const makeup = ctx.createGain();
+    makeup.gain.value = 1.25;
+    rumble.connect(body).connect(boxy).connect(clarity).connect(round).connect(even);
+    even.connect(makeup).connect(this.#analyser).connect(destination);
+    this.#out = rumble;
   }
 
   get busy(): boolean {

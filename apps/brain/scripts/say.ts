@@ -10,7 +10,7 @@ if (!text) {
 }
 const tts = new KokoroTTS({
   voice: process.env.TTS_VOICE ?? "af_heart",
-  speed: Number(process.env.TTS_SPEED ?? 1),
+  speed: Number(process.env.TTS_SPEED ?? 0.95),
 });
 const { samples, sampleRate } = await tts.synthesize(text);
 writeFileSync(out, wav(samples, sampleRate));
