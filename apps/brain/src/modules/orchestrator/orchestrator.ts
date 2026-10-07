@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type { FastifyBaseLogger } from "fastify";
 import { z } from "zod";
+import { matchLine, type ScriptedLine } from "@ms-minutes/persona";
 import { brainMessage, type BrainPayload, type BrainToBodyType } from "@ms-minutes/protocol";
 import type { BodyRecord, BodyRegistry } from "../bodies/registry.js";
 import type { EventBus } from "../events/event-bus.js";
@@ -34,6 +35,8 @@ export type OrchestratorDeps = {
     remember(turn: TurnRecord): Promise<void>;
   };
   now?: () => Date;
+  /** Lines she says word for word when she hears their command (persona/lines.md). */
+  lines?: ScriptedLine[];
 };
 
 /** Bodies that declare this capability play the brain's synthesized voice. */
@@ -147,8 +150,12 @@ export class Orchestrator {
     text: string,
     meta: { sttMs?: number; proactive?: boolean },
   ): Promise<void> {
-    const { llm, systemPrompt, traces, log } = this.#deps;
+    const { systemPrompt, traces, log } = this.#deps;
     const turnId = randomUUID();
+    // A scripted line stands in for the model this turn: same voice, face and history.
+    const line = meta.proactive ? undefined : matchLine(this.#deps.lines ?? [], text);
+    const llm = line ? scripted(line.say) : this.#deps.llm;
+    if (line) log.info({ command: line.when[0] }, "scripted line");
     const started = performance.now();
     const elapsed = () => Math.round(performance.now() - started);
     const say = <T extends BrainToBodyType>(type: T, payload: BrainPayload<T>) =>
@@ -281,7 +288,7 @@ export class Orchestrator {
         );
         this.#history.push({ role: "user", content: results });
       }
-      if (!meta.proactive) await this.#backstop(text, current.spoken, bodyId, trace);
+      if (!meta.proactive && !line) await this.#backstop(text, current.spoken, bodyId, trace);
     } catch (error) {
       if (current.abort.signal.aborted) {
         // Interrupted: keep what was said, cut off, so she knows where she stopped.
@@ -519,4 +526,23 @@ export function asWritten(
   const text = [lead, spoken.trim()].filter(Boolean).join(" ");
   if (!text) return content;
   return [{ type: "text", text }, ...content.filter((b) => b.type !== "text")];
+}
+
+/** An LLM that "writes" a fixed line, in small pieces so her voice starts right away. */
+function scripted(say: string): LLM {
+  return {
+    async stream(_request, onText) {
+      for (const piece of say.match(/\S+\s*/g) ?? []) onText(piece);
+      return {
+        id: `scripted_${randomUUID()}`,
+        type: "message",
+        role: "assistant",
+        model: "scripted",
+        content: [{ type: "text", text: say, citations: null }],
+        stop_reason: "end_turn",
+        stop_sequence: null,
+        usage: { input_tokens: 0, output_tokens: 0 },
+      } as unknown as Anthropic.Beta.BetaMessage;
+    },
+  };
 }

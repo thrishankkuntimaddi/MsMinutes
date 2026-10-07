@@ -31,3 +31,4 @@ export function buildSystemPrompt(options: PersonaOptions): string {
     .replaceAll("{{userLine}}", userLine)
     .trim();
 }
+export { loadLines, matchLine, type ScriptedLine } from "./lines.js";

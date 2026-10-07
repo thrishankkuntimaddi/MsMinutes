@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
+import type { ScriptedLine } from "@ms-minutes/persona";
 import type { BrainToBodyMessage, Capability } from "@ms-minutes/protocol";
 import { BodyRegistry } from "../src/modules/bodies/registry.js";
 import { Orchestrator } from "../src/modules/orchestrator/orchestrator.js";
@@ -12,7 +13,11 @@ const FACE: Capability[] = [
   { name: "express", riskTier: 0 },
 ];
 
-function setup(script: ScriptedReply[], capabilities: Capability[] = FACE) {
+function setup(
+  script: ScriptedReply[],
+  capabilities: Capability[] = FACE,
+  lines: ScriptedLine[] = [],
+) {
   const llm = new FakeLLM(script);
   const sent: BrainToBodyMessage[] = [];
   const registry = new BodyRegistry();
@@ -36,6 +41,7 @@ function setup(script: ScriptedReply[], capabilities: Capability[] = FACE) {
     timezone: "UTC",
     log: Fastify({ logger: false }).log,
     now: () => new Date("2026-10-04T07:30:00Z"),
+    lines,
   });
   const say = (text: string) => orchestrator.enqueue("desk-01", text);
   const summary = () =>
@@ -91,6 +97,29 @@ describe("orchestrator", () => {
     });
     expect(trace!.firstTextMs).not.toBeNull();
     expect(trace!.usage).toEqual({ input: 200, output: 20, cacheRead: 160, cacheWrite: 0 });
+  });
+
+  it("says a scripted line word for word when she hears its command", async () => {
+    const lines = [{ when: ["what have we always wanted"], say: "[proud 0.8] Yours. No problem." }];
+    const { say, summary, llm } = setup([{ text: ["Something else."] }], FACE, lines);
+    await say("And what have we always wanted?");
+
+    expect(summary()).toEqual([
+      "state:thinking",
+      "face:proud:0.8",
+      "state:speaking",
+      "say:Yours. ",
+      "say:No ",
+      "say:problem.",
+      "speech.end",
+      "state:idle",
+    ]);
+    expect(llm.requests).toHaveLength(0);
+
+    // Anything else still goes to the model, which sees the scripted line in history.
+    await say("Ha, thanks");
+    expect(llm.requests).toHaveLength(1);
+    expect(JSON.stringify(llm.requests[0]!.messages)).toContain("Yours. No problem.");
   });
 
   it("tells her the local time and which body she is in", async () => {

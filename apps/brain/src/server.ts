@@ -1,6 +1,6 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
-import { buildSystemPrompt } from "@ms-minutes/persona";
+import { buildSystemPrompt, loadLines, type ScriptedLine } from "@ms-minutes/persona";
 import { PROTOCOL_VERSION } from "@ms-minutes/protocol";
 import type { Config } from "./config.js";
 import { BodyRegistry } from "./modules/bodies/registry.js";
@@ -39,6 +39,8 @@ export type ServerOptions = {
   stt?: STT;
   /** Overrides the configured memory (tests use one over an in-memory database). */
   memory?: MemoryService;
+  /** Overrides her scripted lines (persona/lines.md). */
+  lines?: ScriptedLine[];
 };
 
 export async function buildServer(config: Config, options: ServerOptions = {}) {
@@ -137,6 +139,7 @@ export async function buildServer(config: Config, options: ServerOptions = {}) {
     ...(memory ? { memory } : {}),
     timezone: config.timezone,
     log: app.log,
+    lines: options.lines ?? loadLines(),
   });
   orchestrator.attach(bus);
   announcer.attach(bus);
